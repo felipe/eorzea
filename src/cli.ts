@@ -3,6 +3,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { version, description } from '../package.json';
+import { characterCommand } from './commands/character.js';
+import { questCommand } from './commands/quest.js';
 
 const program = new Command();
 
@@ -18,20 +20,20 @@ program
   .description('Manage and view character information')
   .option('-n, --name <name>', 'Character name')
   .option('-s, --server <server>', 'Server name')
-  .action((options) => {
-    console.log(chalk.blue('Character command coming soon!'));
-    console.log('Options:', options);
+  .option('-i, --id <id>', 'Character ID (for direct lookup)')
+  .action(async (options) => {
+    await characterCommand(options);
   });
 
 // Quest commands
 program
   .command('quest')
   .description('View and manage quests')
-  .option('-l, --list', 'List available quests')
-  .option('-s, --search <query>', 'Search for quests')
-  .action((options) => {
-    console.log(chalk.green('Quest command coming soon!'));
-    console.log('Options:', options);
+  .option('-s, --search <query>', 'Search for quests by name')
+  .option('-l, --level <level>', 'List quests for a specific level')
+  .option('-i, --id <id>', 'Get details for a specific quest')
+  .action(async (options) => {
+    await questCommand(options);
   });
 
 // Location commands
