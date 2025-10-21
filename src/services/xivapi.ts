@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const XIVAPI_BASE_URL = 'https://xivapi.com';
+const XIVAPI_V2_BASE_URL = 'https://v2.xivapi.com';
 const DEFAULT_RATE_LIMIT_MS = 100; // 10 requests per second
 
 export interface XIVAPIConfig {
@@ -9,55 +9,47 @@ export interface XIVAPIConfig {
   rateLimitMs?: number;
 }
 
+// XIVAPI V2 Quest data structure
 export interface XIVAPIQuest {
-  ID: number;
-  Name: string;
-  Level: number;
-  ClassJobLevel0: number;
-  JournalGenre: {
-    ID: number;
+  row_id: number;
+  fields: {
     Name: string;
-  };
-  PlaceName: {
-    ID: number;
-    Name: string;
-  };
-  IssuerLocation: {
-    X: number;
-    Y: number;
-    Z: number;
-  };
-  TargetLocation?: {
-    X: number;
-    Y: number;
-    Z: number;
-  };
-}
-
-export interface XIVAPICharacter {
-  Character: {
-    ID: number;
-    Name: string;
-    Server: string;
-    DC: string;
-    ActiveClassJob: {
-      Level: number;
-      Name: string;
+    ClassJobLevel0: number;
+    JournalGenre?: {
+      row_id: number;
+      fields: {
+        Name: string;
+      };
+    };
+    PlaceName?: {
+      row_id: number;
+      fields: {
+        Name: string;
+      };
+    };
+    IssuerLocation?: {
+      row_id: number;
+      fields: {
+        X: number;
+        Y: number;
+        Z: number;
+      };
     };
   };
 }
 
-export interface XIVAPISearchResult<T> {
-  Pagination: {
-    Page: number;
-    PageNext?: number;
-    PagePrev?: number;
-    PageTotal: number;
-    Results: number;
-    ResultsPerPage: number;
-    ResultsTotal: number;
-  };
-  Results: T[];
+// V2 API sheet response structure
+export interface XIVAPISheetResponse<T> {
+  row_id: number;
+  fields: T;
+}
+
+// V2 API search/list response structure
+export interface XIVAPIListResponse<T> {
+  results: XIVAPISheetResponse<T>[];
+  count: number;
+  page: number;
+  pages: number;
 }
 
 export class XIVAPIClient {
@@ -66,13 +58,13 @@ export class XIVAPIClient {
   private lastRequestTime: number = 0;
 
   constructor(config: XIVAPIConfig = {}) {
-    const { apiKey, baseURL = XIVAPI_BASE_URL, rateLimitMs = DEFAULT_RATE_LIMIT_MS } = config;
+    const { baseURL = XIVAPI_V2_BASE_URL, rateLimitMs = DEFAULT_RATE_LIMIT_MS } = config;
 
     this.client = axios.create({
       baseURL,
-      params: apiKey ? { private_key: apiKey } : {},
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': 'Eorzea Quest Assistant / 0.1.0',
       },
     });
 
@@ -97,80 +89,24 @@ export class XIVAPIClient {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
         throw new Error(
-          `XIVAPI Error: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data)}`
+          `XIVAPI V2 Error: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data)}`
         );
       } else if (axiosError.request) {
-        throw new Error('XIVAPI Error: No response received from server');
+        throw new Error('XIVAPI V2 Error: No response received from server');
       }
     }
-    throw new Error(`XIVAPI Error: ${error}`);
+    throw new Error(`XIVAPI V2 Error: ${error}`);
   }
 
-  async searchCharacter(name: string, server?: string): Promise<XIVAPISearchResult<any>> {
-    await this.rateLimit();
-
-    try {
-      const params: any = { name };
-      if (server) {
-        params.server = server;
-      }
-
-      const response = await this.client.get('/character/search', { params });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async getCharacter(characterId: number): Promise<XIVAPICharacter> {
-    await this.rateLimit();
-
-    try {
-      const response = await this.client.get(`/character/${characterId}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async searchQuests(query: string, page: number = 1): Promise<XIVAPISearchResult<XIVAPIQuest>> {
-    await this.rateLimit();
-
-    try {
-      const response = await this.client.get('/search', {
-        params: {
-          indexes: 'quest',
-          string: query,
-          page,
-        },
-      });
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
+  // V2 API: Get quest by ID
   async getQuest(questId: number): Promise<XIVAPIQuest> {
     await this.rateLimit();
 
     try {
-      const response = await this.client.get(`/quest/${questId}`);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  async getQuestsByLevel(level: number, page: number = 1): Promise<XIVAPISearchResult<XIVAPIQuest>> {
-    await this.rateLimit();
-
-    try {
-      const response = await this.client.get('/search', {
+      const response = await this.client.get(`/api/sheet/Quest/${questId}`, {
         params: {
-          indexes: 'quest',
-          filters: `ClassJobLevel0>=${level},ClassJobLevel0<=${level + 5}`,
-          page,
-        },
+          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name,IssuerLocation.X,IssuerLocation.Y,IssuerLocation.Z'
+        }
       });
       return response.data;
     } catch (error) {
@@ -178,15 +114,53 @@ export class XIVAPIClient {
     }
   }
 
-  async getQuestsByLocation(locationId: number): Promise<XIVAPISearchResult<XIVAPIQuest>> {
+  // V2 API: List quests with optional filtering
+  async getQuests(page: number = 1, limit: number = 100): Promise<XIVAPIListResponse<any>> {
     await this.rateLimit();
 
     try {
-      const response = await this.client.get('/search', {
+      const response = await this.client.get('/api/sheet/Quest', {
         params: {
-          indexes: 'quest',
-          filters: `PlaceNameID=${locationId}`,
-        },
+          page,
+          limit,
+          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // V2 API: Get quests by level range
+  async getQuestsByLevel(minLevel: number, maxLevel?: number): Promise<XIVAPIListResponse<any>> {
+    await this.rateLimit();
+
+    try {
+      const actualMaxLevel = maxLevel || minLevel + 5;
+      const response = await this.client.get('/api/sheet/Quest', {
+        params: {
+          'filter[ClassJobLevel0][gte]': minLevel,
+          'filter[ClassJobLevel0][lte]': actualMaxLevel,
+          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
+        }
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // V2 API: Search quests by name (simple text search)
+  async searchQuests(query: string): Promise<XIVAPIListResponse<any>> {
+    await this.rateLimit();
+
+    try {
+      const response = await this.client.get('/api/sheet/Quest', {
+        params: {
+          'filter[Name][contains]': query,
+          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
+        }
       });
       return response.data;
     } catch (error) {

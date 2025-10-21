@@ -14,7 +14,6 @@ export interface QuestCommandOptions {
 export async function questCommand(options: QuestCommandOptions): Promise<void> {
   const config = getConfig().get();
   const apiClient = getXIVAPIClient({
-    apiKey: config.xivapi.apiKey,
     rateLimitMs: config.xivapi.rateLimitMs,
   });
 
@@ -49,21 +48,21 @@ async function searchQuests(apiClient: any, query: string): Promise<void> {
   try {
     const results = await apiClient.searchQuests(query);
 
-    if (!results.Results || results.Results.length === 0) {
+    if (!results.results || results.results.length === 0) {
       spinner.fail(chalk.red('No quests found'));
       return;
     }
 
     spinner.succeed(
-      chalk.green(`Found ${results.Results.length} quest(s) (Page 1 of ${results.Pagination.PageTotal})`)
+      chalk.green(`Found ${results.results.length} quest(s) (Page ${results.page} of ${results.pages})`)
     );
 
-    displayQuestTable(results.Results);
+    displayQuestTableV2(results.results);
 
-    if (results.Pagination.PageTotal > 1) {
+    if (results.pages > 1) {
       console.log(
         chalk.yellow(
-          `\nShowing page 1 of ${results.Pagination.PageTotal}. Total results: ${results.Pagination.ResultsTotal}`
+          `\nShowing page ${results.page} of ${results.pages}. Total results: ${results.count}`
         )
       );
     }
@@ -81,14 +80,14 @@ async function listQuestsByLevel(apiClient: any, level: number): Promise<void> {
   try {
     const results = await apiClient.getQuestsByLevel(level);
 
-    if (!results.Results || results.Results.length === 0) {
+    if (!results.results || results.results.length === 0) {
       spinner.fail(chalk.red(`No quests found for level ${level}`));
       return;
     }
 
-    spinner.succeed(chalk.green(`Found ${results.Results.length} quest(s) for level ${level}`));
+    spinner.succeed(chalk.green(`Found ${results.results.length} quest(s) for level ${level}`));
 
-    displayQuestTable(results.Results);
+    displayQuestTableV2(results.results);
 
     console.log(chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest'));
   } catch (error) {
@@ -103,37 +102,32 @@ async function fetchQuestById(apiClient: any, questId: number): Promise<void> {
   try {
     const quest = await apiClient.getQuest(questId);
 
-    if (!quest) {
+    if (!quest || !quest.fields) {
       spinner.fail(chalk.red('Quest not found'));
       return;
     }
 
     spinner.succeed(chalk.green('Quest details retrieved'));
 
-    // Display quest information
+    // Display quest information (V2 API format)
     console.log(chalk.bold.cyan('\n=== Quest Information ===\n'));
-    console.log(`${chalk.bold('Name:')} ${quest.Name || 'Unknown'}`);
-    console.log(`${chalk.bold('ID:')} ${quest.ID}`);
-    console.log(`${chalk.bold('Level:')} ${quest.ClassJobLevel0 || quest.Level || 'N/A'}`);
+    console.log(`${chalk.bold('Name:')} ${quest.fields.Name || 'Unknown'}`);
+    console.log(`${chalk.bold('ID:')} ${quest.row_id}`);
+    console.log(`${chalk.bold('Level:')} ${quest.fields.ClassJobLevel0 || 'N/A'}`);
 
-    if (quest.JournalGenre?.Name) {
-      console.log(`${chalk.bold('Type:')} ${quest.JournalGenre.Name}`);
+    if (quest.fields.JournalGenre?.fields?.Name) {
+      console.log(`${chalk.bold('Type:')} ${quest.fields.JournalGenre.fields.Name}`);
     }
 
-    if (quest.PlaceName?.Name) {
-      console.log(`${chalk.bold('Location:')} ${quest.PlaceName.Name}`);
+    if (quest.fields.PlaceName?.fields?.Name) {
+      console.log(`${chalk.bold('Location:')} ${quest.fields.PlaceName.fields.Name}`);
     }
 
-    if (quest.IssuerLocation) {
+    if (quest.fields.IssuerLocation?.fields) {
+      const loc = quest.fields.IssuerLocation.fields;
       console.log(
-        `${chalk.bold('Start Location:')} X: ${quest.IssuerLocation.X.toFixed(1)}, Y: ${quest.IssuerLocation.Y.toFixed(1)}`
+        `${chalk.bold('Start Location:')} X: ${loc.X?.toFixed(1) || 'N/A'}, Y: ${loc.Y?.toFixed(1) || 'N/A'}`
       );
-    }
-
-    // Display quest description if available
-    if (quest.GameContentLinks) {
-      console.log(chalk.bold('\nQuest Chain:'));
-      console.log(chalk.dim('This quest is part of a larger quest chain'));
     }
 
     console.log('');
@@ -143,7 +137,7 @@ async function fetchQuestById(apiClient: any, questId: number): Promise<void> {
   }
 }
 
-function displayQuestTable(quests: any[]): void {
+function displayQuestTableV2(quests: any[]): void {
   const table = new Table({
     head: ['ID', 'Name', 'Level', 'Type', 'Location'].map((h) => chalk.cyan(h)),
     style: {
@@ -154,12 +148,13 @@ function displayQuestTable(quests: any[]): void {
   });
 
   quests.forEach((quest: any) => {
+    const fields = quest.fields || {};
     table.push([
-      quest.ID,
-      quest.Name || 'Unknown',
-      quest.ClassJobLevel0 || quest.Level || 'N/A',
-      quest.JournalGenre?.Name || 'N/A',
-      quest.PlaceName?.Name || 'N/A',
+      quest.row_id || 'N/A',
+      fields.Name || 'Unknown',
+      fields.ClassJobLevel0 || 'N/A',
+      fields.JournalGenre?.fields?.Name || 'N/A',
+      fields.PlaceName?.fields?.Name || 'N/A',
     ]);
   });
 
