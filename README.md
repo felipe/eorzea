@@ -42,10 +42,11 @@ yarn format
 Create a `.env` file in the project root (see `.env.example`):
 
 ```env
-XIVAPI_KEY=your_api_key_here
 DEFAULT_CHARACTER_NAME=Your Character Name
 DEFAULT_SERVER=YourServer
 ```
+
+*Note: XIVAPI V2 no longer requires API keys for basic functionality.*
 
 ## Usage
 
@@ -72,19 +73,19 @@ eorzea guide <questId>
 ## Current Status
 
 ### Implemented Features ✓
-- ✅ XIVAPI client with rate limiting
-- ✅ Configuration management (env vars + config file)
-- ✅ Character search and lookup commands
-- ✅ Quest search and filtering commands
-- ✅ Error handling and user-friendly output
+- ✅ **XIVAPI V2 Integration**: Quest data, search, and filtering using the new V2 API
+- ✅ **Custom Lodestone Scraper**: Character search and profile lookup via direct scraping
+- ✅ **Configuration Management**: Environment variables and local config file support
+- ✅ **Character Commands**: Search by name/server, lookup by ID with full profile data
+- ✅ **Quest Commands**: Search by name, filter by level, view detailed quest information
+- ✅ **Rate Limiting**: Respectful API usage with 1s delays for Lodestone, 100ms for XIVAPI
+- ✅ **Error Handling**: User-friendly error messages and graceful failure handling
 
-### Known Limitations
-- ⚠️ **XIVAPI Status**: The public XIVAPI service is experiencing issues:
-  - Character/Lodestone endpoints return 403 (marked as private)
-  - Quest search returns 500 (search cluster down)
-- These are external API issues, not problems with the implementation
-- The code is ready and will work when XIVAPI is operational
-- Alternative: Consider using self-hosted XIVAPI or alternative data sources
+### Migration to V2 APIs ✅
+- **Migrated from XIVAPI V1 → V2**: Updated to use the new `/api/sheet/` endpoints
+- **Added Custom Lodestone Scraper**: Replaced deprecated V1 character endpoints
+- **No More API Keys Required**: XIVAPI V2 works without authentication for basic usage
+- **Improved Data Structure**: Better field organization and more reliable quest data
 
 ### In Progress
 - 🔨 SQLite caching layer
@@ -100,7 +101,8 @@ See `agent-os/product/roadmap.md` for the full development roadmap.
 - **Runtime**: Node.js v20+ with TypeScript
 - **CLI Framework**: Commander.js + Inquirer.js
 - **Database**: SQLite with Prisma ORM (coming soon)
-- **Data Sources**: XIVAPI + Lodestone
+- **Data Sources**: XIVAPI V2 + Custom Lodestone Scraper
+- **Web Scraping**: Cheerio for HTML parsing, Axios for HTTP requests
 
 ## License
 

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import Table from 'cli-table3';
-import { getXIVAPIClient } from '../services/xivapi.js';
+import { getLodestoneClient } from '../services/lodestone.js';
 import { getConfig } from '../utils/config.js';
 
 export interface CharacterCommandOptions {
@@ -12,10 +12,7 @@ export interface CharacterCommandOptions {
 
 export async function characterCommand(options: CharacterCommandOptions): Promise<void> {
   const config = getConfig().get();
-  const apiClient = getXIVAPIClient({
-    apiKey: config.xivapi.apiKey,
-    rateLimitMs: config.xivapi.rateLimitMs,
-  });
+  const lodestoneClient = getLodestoneClient();
 
   // Use provided values or fall back to config defaults
   const characterName = options.name || config.character.defaultName;
@@ -23,7 +20,7 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
 
   // If ID is provided, fetch character directly
   if (options.id) {
-    await fetchCharacterById(apiClient, parseInt(options.id, 10));
+    await fetchCharacterById(lodestoneClient, options.id);
     return;
   }
 
@@ -39,14 +36,14 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
   const spinner = ora(`Searching for character: ${characterName}`).start();
 
   try {
-    const searchResults = await apiClient.searchCharacter(characterName, serverName);
+    const searchResults = await lodestoneClient.searchCharacter(characterName, serverName);
 
-    if (!searchResults.Results || searchResults.Results.length === 0) {
+    if (!searchResults.characters || searchResults.characters.length === 0) {
       spinner.fail(chalk.red('No characters found'));
       return;
     }
 
-    spinner.succeed(chalk.green(`Found ${searchResults.Results.length} character(s)`));
+    spinner.succeed(chalk.green(`Found ${searchResults.characters.length} character(s)`));
 
     // Display search results in a table
     const table = new Table({
@@ -57,16 +54,16 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
       },
     });
 
-    searchResults.Results.forEach((result: any) => {
-      table.push([result.ID, result.Name, result.Server, result.DC || 'N/A']);
+    searchResults.characters.forEach((character) => {
+      table.push([character.id, character.name, character.server, character.dataCenter || 'N/A']);
     });
 
     console.log('\n' + table.toString());
 
     // If only one result, fetch full details
-    if (searchResults.Results.length === 1) {
+    if (searchResults.characters.length === 1) {
       console.log(chalk.yellow('\nFetching character details...\n'));
-      await fetchCharacterById(apiClient, searchResults.Results[0].ID);
+      await fetchCharacterById(lodestoneClient, searchResults.characters[0].id);
     } else {
       console.log(
         chalk.yellow('\nTip: Use --id <ID> to view detailed information for a specific character')
@@ -78,38 +75,34 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
   }
 }
 
-async function fetchCharacterById(apiClient: any, characterId: number): Promise<void> {
+async function fetchCharacterById(lodestoneClient: any, characterId: string): Promise<void> {
   const spinner = ora(`Fetching character details for ID: ${characterId}`).start();
 
   try {
-    const characterData = await apiClient.getCharacter(characterId);
+    const character = await lodestoneClient.getCharacter(characterId);
 
-    if (!characterData || !characterData.Character) {
+    if (!character) {
       spinner.fail(chalk.red('Character not found'));
       return;
     }
 
     spinner.succeed(chalk.green('Character details retrieved'));
 
-    const char = characterData.Character;
-
     // Display character information
     console.log(chalk.bold.cyan('\n=== Character Information ===\n'));
-    console.log(`${chalk.bold('Name:')} ${char.Name}`);
-    console.log(`${chalk.bold('Server:')} ${char.Server} (${char.DC})`);
-    console.log(
-      `${chalk.bold('Active Class/Job:')} ${char.ActiveClassJob?.Name || 'N/A'} (Level ${char.ActiveClassJob?.Level || 'N/A'})`
-    );
+    console.log(`${chalk.bold('Name:')} ${character.name}`);
+    console.log(`${chalk.bold('Server:')} ${character.server} ${character.dataCenter ? `(${character.dataCenter})` : ''}`);
 
-    // Display minions, mounts, title if available
-    if (characterData.Minions) {
-      console.log(`${chalk.bold('Minions:')} ${characterData.Minions.length}`);
+    if (character.job && character.level) {
+      console.log(`${chalk.bold('Active Class/Job:')} ${character.job} (Level ${character.level})`);
     }
-    if (characterData.Mounts) {
-      console.log(`${chalk.bold('Mounts:')} ${characterData.Mounts.length}`);
+
+    if (character.title) {
+      console.log(`${chalk.bold('Title:')} ${character.title}`);
     }
-    if (char.Title) {
-      console.log(`${chalk.bold('Title:')} ${char.Title.Name || 'None'}`);
+
+    if (character.freeCompany) {
+      console.log(`${chalk.bold('Free Company:')} ${character.freeCompany}`);
     }
 
     console.log('');
