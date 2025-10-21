@@ -92,6 +92,13 @@ eorzea guide <questId>
 - 🔨 Location-based quest filtering
 - 🔨 Quest walkthrough display
 
+## TODO
+
+- [ ] **Integrate FF14 Fish Tracker**: Research and integrate fishing data from [ff14-fish-tracker-app](https://github.com/icykoneko/ff14-fish-tracker-app)
+  - Explore fish location data, weather conditions, and bait requirements
+  - Consider adding fishing-specific commands to the CLI
+  - Evaluate API/data extraction methods from the tracker
+
 ## Roadmap
 
 See `agent-os/product/roadmap.md` for the full development roadmap.
