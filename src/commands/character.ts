@@ -105,6 +105,41 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
       console.log(`${chalk.bold('Free Company:')} ${character.freeCompany}`);
     }
 
+    // Fetch and display all class/job levels
+    try {
+      const classJobs = await lodestoneClient.getCharacterClassJobs(characterId);
+
+      if (classJobs) {
+        console.log(chalk.bold.cyan('\n=== Class/Job Levels ===\n'));
+
+        // Display combat jobs
+        const combatJobs = ['Paladin', 'Warrior', 'Darkknight', 'Gunbreaker', 'Whitemage', 'Scholar', 'Astrologian', 'Sage',
+                           'Monk', 'Dragoon', 'Ninja', 'Samurai', 'Reaper', 'Bard', 'Machinist', 'Dancer',
+                           'Blackmage', 'Summoner', 'Redmage', 'Bluemage'];
+        const crafters = ['Carpenter', 'Blacksmith', 'Armorer', 'Goldsmith', 'Leatherworker', 'Weaver', 'Alchemist', 'Culinarian'];
+        const gatherers = ['Miner', 'Botanist', 'Fisher'];
+
+        const displayJobs = (title: string, jobs: string[]) => {
+          const leveled = jobs.filter(job => classJobs[job]?.Level && parseInt(classJobs[job].Level) > 0);
+          if (leveled.length > 0) {
+            console.log(chalk.bold(`${title}:`));
+            leveled.forEach(job => {
+              const level = classJobs[job].Level || '0';
+              console.log(`  ${job}: ${chalk.green(level)}`);
+            });
+            console.log('');
+          }
+        };
+
+        displayJobs('Combat Jobs', combatJobs);
+        displayJobs('Crafters', crafters);
+        displayJobs('Gatherers', gatherers);
+      }
+    } catch (error) {
+      // Silently fail if class/job data isn't available
+      console.log(chalk.yellow('Note: Could not fetch detailed class/job information'));
+    }
+
     console.log('');
   } catch (error) {
     spinner.fail(chalk.red('Failed to fetch character details'));

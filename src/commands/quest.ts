@@ -14,7 +14,7 @@ export interface QuestCommandOptions {
 export async function questCommand(options: QuestCommandOptions): Promise<void> {
   const config = getConfig().get();
   const apiClient = getXIVAPIClient({
-    rateLimitMs: config.xivapi.rateLimitMs,
+    language: 'en',
   });
 
   // Get quest by ID
@@ -54,15 +54,15 @@ async function searchQuests(apiClient: any, query: string): Promise<void> {
     }
 
     spinner.succeed(
-      chalk.green(`Found ${results.results.length} quest(s) (Page ${results.page} of ${results.pages})`)
+      chalk.green(`Found ${results.results.length} quest(s)`)
     );
 
     displayQuestTableV2(results.results);
 
-    if (results.pages > 1) {
+    if (results.next) {
       console.log(
         chalk.yellow(
-          `\nShowing page ${results.page} of ${results.pages}. Total results: ${results.count}`
+          `\nMore results available. Use the 'next' cursor to fetch additional pages.`
         )
       );
     }
@@ -128,6 +128,30 @@ async function fetchQuestById(apiClient: any, questId: number): Promise<void> {
       console.log(
         `${chalk.bold('Start Location:')} X: ${loc.X?.toFixed(1) || 'N/A'}, Y: ${loc.Y?.toFixed(1) || 'N/A'}`
       );
+    }
+
+    // Show additional quest information
+    if (quest.fields.GilReward) {
+      console.log(`${chalk.bold('Gil Reward:')} ${quest.fields.GilReward}`);
+    }
+
+    if (quest.fields.ExpFactor) {
+      console.log(`${chalk.bold('Experience Factor:')} ${quest.fields.ExpFactor}`);
+    }
+
+    if (quest.fields.IsRepeatable !== undefined) {
+      console.log(`${chalk.bold('Repeatable:')} ${quest.fields.IsRepeatable ? 'Yes' : 'No'}`);
+    }
+
+    if (quest.fields.Expansion?.fields?.Name) {
+      console.log(`${chalk.bold('Expansion:')} ${quest.fields.Expansion.fields.Name}`);
+    }
+
+    if (quest.fields.ItemRewardType && Array.isArray(quest.fields.ItemRewardType)) {
+      const items = quest.fields.ItemRewardType.filter((item: any) => item?.value > 0);
+      if (items.length > 0) {
+        console.log(`${chalk.bold('Item Rewards:')} ${items.length} item(s)`);
+      }
     }
 
     console.log('');

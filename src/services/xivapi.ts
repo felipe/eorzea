@@ -1,170 +1,140 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-
-const XIVAPI_V2_BASE_URL = 'https://v2.xivapi.com';
-const DEFAULT_RATE_LIMIT_MS = 100; // 10 requests per second
+// @ts-ignore - Using v2-upgrade branch from GitHub with source imports
+import XIVAPI from '@xivapi/js/dist/index.js';
 
 export interface XIVAPIConfig {
-  apiKey?: string;
-  baseURL?: string;
-  rateLimitMs?: number;
+  version?: string;
+  language?: 'en' | 'de' | 'fr' | 'ja';
+  verbose?: boolean;
 }
 
-// XIVAPI V2 Quest data structure
+// Quest data structure from XIVAPI v2
 export interface XIVAPIQuest {
   row_id: number;
   fields: {
-    Name: string;
-    ClassJobLevel0: number;
+    Name?: string;
+    Icon?: {
+      id: number;
+      path: string;
+      path_hr1?: string;
+    };
+    ClassJobLevel0?: number;
     JournalGenre?: {
       row_id: number;
-      fields: {
-        Name: string;
+      fields?: {
+        Name?: string;
       };
     };
     PlaceName?: {
       row_id: number;
-      fields: {
-        Name: string;
+      fields?: {
+        Name?: string;
       };
     };
-    IssuerLocation?: {
-      row_id: number;
-      fields: {
-        X: number;
-        Y: number;
-        Z: number;
-      };
-    };
+    [key: string]: any;
   };
+  sheet: string;
+  score?: number;
 }
 
-// V2 API sheet response structure
-export interface XIVAPISheetResponse<T> {
-  row_id: number;
-  fields: T;
-}
-
-// V2 API search/list response structure
-export interface XIVAPIListResponse<T> {
-  results: XIVAPISheetResponse<T>[];
-  count: number;
-  page: number;
-  pages: number;
+export interface XIVAPISearchResult {
+  results: XIVAPIQuest[];
+  schema: string;
+  next?: string | null;
 }
 
 export class XIVAPIClient {
-  private client: AxiosInstance;
-  private rateLimitMs: number;
-  private lastRequestTime: number = 0;
+  private client: XIVAPI;
 
   constructor(config: XIVAPIConfig = {}) {
-    const { baseURL = XIVAPI_V2_BASE_URL, rateLimitMs = DEFAULT_RATE_LIMIT_MS } = config;
+    const { version = 'latest', language = 'en', verbose = false } = config;
 
-    this.client = axios.create({
-      baseURL,
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Eorzea Quest Assistant / 0.1.0',
-      },
+    this.client = new XIVAPI({
+      version,
+      language,
+      verbose,
     });
-
-    this.rateLimitMs = rateLimitMs;
   }
 
-  private async rateLimit(): Promise<void> {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-
-    if (timeSinceLastRequest < this.rateLimitMs) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.rateLimitMs - timeSinceLastRequest)
-      );
-    }
-
-    this.lastRequestTime = Date.now();
-  }
-
-  private handleError(error: unknown): never {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-      if (axiosError.response) {
-        throw new Error(
-          `XIVAPI V2 Error: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data)}`
-        );
-      } else if (axiosError.request) {
-        throw new Error('XIVAPI V2 Error: No response received from server');
-      }
-    }
-    throw new Error(`XIVAPI V2 Error: ${error}`);
-  }
-
-  // V2 API: Get quest by ID
+  // Get quest by ID using the new v2 API
   async getQuest(questId: number): Promise<XIVAPIQuest> {
-    await this.rateLimit();
-
     try {
-      const response = await this.client.get(`/api/sheet/Quest/${questId}`, {
-        params: {
-          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name,IssuerLocation.X,IssuerLocation.Y,IssuerLocation.Z'
-        }
-      });
-      return response.data;
+      // Use the data.sheets API to get a specific quest
+      // Request all text fields by not specifying a fields filter
+      const quest = await this.client.data.sheets().get('Quest', questId.toString());
+
+      return {
+        row_id: quest.row_id,
+        fields: quest.fields,
+        sheet: 'Quest', // Use the sheet name directly since response has 'schema' not 'sheet'
+      } as XIVAPIQuest;
     } catch (error) {
-      this.handleError(error);
+      if (error instanceof Error) {
+        throw new Error(`XIVAPI Error: ${error.message}`);
+      }
+      throw new Error(`XIVAPI Error: ${error}`);
     }
   }
 
-  // V2 API: List quests with optional filtering
-  async getQuests(page: number = 1, limit: number = 100): Promise<XIVAPIListResponse<any>> {
-    await this.rateLimit();
-
+  // Search quests by name using v2 search API
+  async searchQuests(query: string, limit: number = 10): Promise<XIVAPISearchResult> {
     try {
-      const response = await this.client.get('/api/sheet/Quest', {
-        params: {
-          page,
-          limit,
-          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
-        }
+      // V2 uses a query language: Name~"searchterm"
+      const searchResults = await this.client.search({
+        query: `Name~"${query}"`,
+        sheets: 'Quest',
+        limit,
       });
-      return response.data;
+
+      return {
+        results: searchResults.results as XIVAPIQuest[],
+        schema: searchResults.schema,
+        next: searchResults.next,
+      };
     } catch (error) {
-      this.handleError(error);
+      if (error instanceof Error) {
+        throw new Error(`XIVAPI Error: ${error.message}`);
+      }
+      throw new Error(`XIVAPI Error: ${error}`);
     }
   }
 
-  // V2 API: Get quests by level range
-  async getQuestsByLevel(minLevel: number, maxLevel?: number): Promise<XIVAPIListResponse<any>> {
-    await this.rateLimit();
-
+  // Get quests by level range using v2 search with filters
+  async getQuestsByLevel(minLevel: number, maxLevel?: number): Promise<XIVAPISearchResult> {
     try {
       const actualMaxLevel = maxLevel || minLevel + 5;
-      const response = await this.client.get('/api/sheet/Quest', {
-        params: {
-          'filter[ClassJobLevel0][gte]': minLevel,
-          'filter[ClassJobLevel0][lte]': actualMaxLevel,
-          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
-        }
+
+      // V2 uses query syntax for filtering
+      const searchResults = await this.client.search({
+        query: `ClassJobLevel0>=${minLevel} ClassJobLevel0<=${actualMaxLevel}`,
+        sheets: 'Quest',
+        limit: 100,
       });
-      return response.data;
+
+      return {
+        results: searchResults.results as XIVAPIQuest[],
+        schema: searchResults.schema,
+        next: searchResults.next,
+      };
     } catch (error) {
-      this.handleError(error);
+      if (error instanceof Error) {
+        throw new Error(`XIVAPI Error: ${error.message}`);
+      }
+      throw new Error(`XIVAPI Error: ${error}`);
     }
   }
 
-  // V2 API: Search quests by name (simple text search)
-  async searchQuests(query: string): Promise<XIVAPIListResponse<any>> {
-    await this.rateLimit();
-
+  // Get list of quests (paginated)
+  async getQuests(limit: number = 100): Promise<any> {
     try {
-      const response = await this.client.get('/api/sheet/Quest', {
-        params: {
-          'filter[Name][contains]': query,
-          fields: 'Name,ClassJobLevel0,JournalGenre.Name,PlaceName.Name'
-        }
+      const quests = await this.client.data.sheets().list('Quest', {
+        limit,
       });
-      return response.data;
+      return quests;
     } catch (error) {
-      this.handleError(error);
+      if (error instanceof Error) {
+        throw new Error(`XIVAPI Error: ${error.message}`);
+      }
+      throw new Error(`XIVAPI Error: ${error}`);
     }
   }
 }
