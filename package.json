@@ -1,0 +1,54 @@
+{
+  "name": "eorzea",
+  "version": "0.1.0",
+  "description": "FFXIV Quest Assistant - A terminal-first quest tracking tool for casual FFXIV players",
+  "main": "dist/index.js",
+  "bin": "dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "keywords": [
+    "ffxiv",
+    "final-fantasy-xiv",
+    "quest",
+    "assistant",
+    "cli",
+    "gaming"
+  ],
+  "author": "Felipe Eduardo Sierra",
+  "license": "MIT",
+  "packageManager": "yarn@4.9.2",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.1",
+    "dotenv": "^17.2.3",
+    "inquirer": "^12.10.0",
+    "ora": "^9.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "jest": "^30.2.0",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "yn": "^5.1.0"
+  }
+}
