@@ -99,6 +99,14 @@ eorzea guide <questId>
   - Consider adding fishing-specific commands to the CLI
   - Evaluate API/data extraction methods from the tracker
 
+- [ ] **Augment Quest Data with Garland Tools**: Integrate [Garland Tools API](https://github.com/karashiiro/garlandtools-api) for enhanced quest information
+  - Add quest objectives and walkthroughs (not available in XIVAPI)
+  - Include dialogue, cutscene markers, and journal entries
+  - Show detailed rewards including optional choices
+  - Display NPC locations and involved characters
+  - Access to quest prerequisites and follow-up quests
+  - Note: Garland Tools provides comprehensive quest data including descriptions, objectives, and narrative content that XIVAPI v2 lacks
+
 ## Roadmap
 
 See `agent-os/product/roadmap.md` for the full development roadmap.
