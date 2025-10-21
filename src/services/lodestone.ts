@@ -1,19 +1,17 @@
-import axios, { AxiosInstance } from 'axios';
-import * as cheerio from 'cheerio';
-
-const LODESTONE_BASE_URL = 'https://na.finalfantasyxiv.com/lodestone';
-const DEFAULT_RATE_LIMIT_MS = 1000; // 1 request per second to be respectful
+import { Character, CharacterSearch, ClassJob } from '@xivapi/nodestone';
 
 export interface LodestoneCharacter {
   id: string;
   name: string;
   server: string;
-  avatar: string;
+  avatar?: string;
   title?: string;
   level?: number;
   job?: string;
   freeCompany?: string;
   dataCenter?: string;
+  // Additional fields from nodestone
+  [key: string]: any;
 }
 
 export interface LodestoneSearchResult {
@@ -23,54 +21,55 @@ export interface LodestoneSearchResult {
 }
 
 export class LodestoneClient {
-  private client: AxiosInstance;
-  private rateLimitMs: number;
-  private lastRequestTime: number = 0;
+  private characterParser: Character;
+  private characterSearchParser: CharacterSearch;
+  private classJobParser: ClassJob;
 
-  constructor(rateLimitMs: number = DEFAULT_RATE_LIMIT_MS) {
-    this.client = axios.create({
-      baseURL: LODESTONE_BASE_URL,
-      headers: {
-        'User-Agent': 'Eorzea Quest Assistant / 0.1.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'DNT': '1',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-      },
-      timeout: 10000,
-    });
-
-    this.rateLimitMs = rateLimitMs;
-  }
-
-  private async rateLimit(): Promise<void> {
-    const now = Date.now();
-    const timeSinceLastRequest = now - this.lastRequestTime;
-
-    if (timeSinceLastRequest < this.rateLimitMs) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.rateLimitMs - timeSinceLastRequest)
-      );
-    }
-
-    this.lastRequestTime = Date.now();
+  constructor() {
+    this.characterParser = new Character();
+    this.characterSearchParser = new CharacterSearch();
+    this.classJobParser = new ClassJob();
   }
 
   async searchCharacter(name: string, server?: string): Promise<LodestoneSearchResult> {
-    await this.rateLimit();
-
     try {
-      const params: any = { q: name };
+      // Create a mock Express request object
+      // Note: nodestone expects 'name' and 'server' not 'q' and 'worldname'
+      const mockReq: any = {
+        query: {
+          name: name,
+        },
+        params: {},
+      };
+
       if (server) {
-        params.worldname = server;
+        mockReq.query.server = server;
       }
 
-      const response = await this.client.get('/character/', { params });
-      return this.parseCharacterSearchResults(response.data);
+      const searchResults = await this.characterSearchParser.parse(mockReq) as any;
+
+      // Transform nodestone results to our format
+      const characters: LodestoneCharacter[] = [];
+
+      if (searchResults && searchResults.List) {
+        for (const result of searchResults.List) {
+          characters.push({
+            id: result.ID?.toString() || '',
+            name: result.Name || '',
+            server: result.World || '', // nodestone uses "World" not "Server"
+            avatar: result.Avatar || '',
+            dataCenter: result.DC || undefined,
+          });
+        }
+      }
+
+      return {
+        characters,
+        totalResults: searchResults?.Pagination?.PageTotal,
+        page: searchResults?.Pagination?.Page,
+      };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
+      if (error instanceof Error) {
         throw new Error(`Lodestone search failed: ${error.message}`);
       }
       throw new Error(`Lodestone search failed: ${error}`);
@@ -78,14 +77,39 @@ export class LodestoneClient {
   }
 
   async getCharacter(characterId: string): Promise<LodestoneCharacter | null> {
-    await this.rateLimit();
-
     try {
-      const response = await this.client.get(`/character/${characterId}/`);
-      return this.parseCharacterProfile(response.data, characterId);
+      // Create a mock Express request object with character ID
+      const mockReq: any = {
+        params: {
+          characterId,
+        },
+        query: {},
+      };
+
+      const character = await this.characterParser.parse(mockReq) as any;
+
+      if (!character) {
+        return null;
+      }
+
+      // Transform nodestone character data to our format
+      return {
+        id: characterId,
+        name: character.Name || '',
+        server: character.World || '', // nodestone uses "World" not "Server"
+        avatar: character.Avatar || '',
+        title: character.Title || undefined,
+        level: character.Level || undefined,
+        job: character.Mainhand?.ClassList || undefined, // Active job from equipped mainhand
+        freeCompany: character.FreeCompany?.Name || undefined,
+        dataCenter: character.DC || undefined,
+        // Include all other fields from nodestone
+        ...character,
+      };
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 404) {
+      if (error instanceof Error) {
+        // Check for 404 errors
+        if (error.message.includes('404')) {
           return null;
         }
         throw new Error(`Lodestone character fetch failed: ${error.message}`);
@@ -94,89 +118,33 @@ export class LodestoneClient {
     }
   }
 
-  private parseCharacterSearchResults(html: string): LodestoneSearchResult {
-    const $ = cheerio.load(html);
-    const characters: LodestoneCharacter[] = [];
+  async getCharacterClassJobs(characterId: string): Promise<any> {
+    try {
+      // Create a mock Express request object with character ID
+      const mockReq: any = {
+        params: {
+          characterId,
+        },
+        query: {},
+      };
 
-    $('.ldst__window .entry').each((_, element) => {
-      const $entry = $(element);
-
-      // Extract character ID from profile link
-      const profileLink = $entry.find('.entry__link').attr('href');
-      const idMatch = profileLink?.match(/\/character\/(\d+)\//);
-      if (!idMatch) return;
-
-      const id = idMatch[1];
-      const name = $entry.find('.entry__name').text().trim();
-      const avatar = $entry.find('.entry__chara__face img').attr('src') || '';
-
-      // Extract server info
-      const serverInfo = $entry.find('.entry__world').text().trim();
-      const serverMatch = serverInfo.match(/^([^(]+)(?:\(([^)]+)\))?/);
-      const server = serverMatch?.[1]?.trim() || '';
-      const dataCenter = serverMatch?.[2]?.trim();
-
-      characters.push({
-        id,
-        name,
-        server,
-        avatar,
-        dataCenter,
-      });
-    });
-
-    return { characters };
-  }
-
-  private parseCharacterProfile(html: string, characterId: string): LodestoneCharacter {
-    const $ = cheerio.load(html);
-
-    const name = $('.frame__chara__name').text().trim();
-    const title = $('.frame__chara__title').text().trim();
-    const avatar = $('.frame__chara__face img').attr('src') || '';
-
-    // Extract server info
-    const serverInfo = $('.frame__chara__world').text().trim();
-    const serverMatch = serverInfo.match(/^([^(]+)(?:\(([^)]+)\))?/);
-    const server = serverMatch?.[1]?.trim() || '';
-    const dataCenter = serverMatch?.[2]?.trim();
-
-    // Extract job and level info
-    const jobInfo = $('.character__class__data');
-    let level: number | undefined;
-    let job: string | undefined;
-
-    if (jobInfo.length > 0) {
-      const levelText = jobInfo.find('.character__class__lv').text().trim();
-      const jobText = jobInfo.find('.character__class__name').text().trim();
-
-      level = parseInt(levelText) || undefined;
-      job = jobText || undefined;
+      const classJobs = await this.classJobParser.parse(mockReq) as any;
+      return classJobs;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Lodestone class/job fetch failed: ${error.message}`);
+      }
+      throw new Error(`Lodestone class/job fetch failed: ${error}`);
     }
-
-    // Extract Free Company
-    const freeCompany = $('.character__freecompany__name a').text().trim() || undefined;
-
-    return {
-      id: characterId,
-      name,
-      server,
-      avatar,
-      title: title || undefined,
-      level,
-      job,
-      freeCompany,
-      dataCenter,
-    };
   }
 }
 
 // Export singleton instance
 let lodestoneClientInstance: LodestoneClient | null = null;
 
-export function getLodestoneClient(rateLimitMs?: number): LodestoneClient {
+export function getLodestoneClient(): LodestoneClient {
   if (!lodestoneClientInstance) {
-    lodestoneClientInstance = new LodestoneClient(rateLimitMs);
+    lodestoneClientInstance = new LodestoneClient();
   }
   return lodestoneClientInstance;
 }
