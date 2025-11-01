@@ -17,17 +17,36 @@ A terminal-first quest tracking tool for casual FFXIV players.
 yarn install
 ```
 
+## Installation
+
+### Local Development
+
+```bash
+# Install dependencies
+yarn install
+
+# Link the CLI globally (makes 'eorzea' command available)
+npm link
+
+# Now you can use 'eorzea' from anywhere!
+eorzea --help
+```
+
+### From Source
+
+```bash
+# Clone and install
+git clone https://github.com/felipe/eorzea.git
+cd eorzea
+yarn install
+npm link
+```
+
 ## Development
 
 ```bash
 # Run in development mode
-yarn dev
-
-# Build the project
-yarn build
-
-# Run built CLI
-yarn start
+yarn dev <command>
 
 # Run tests
 yarn test

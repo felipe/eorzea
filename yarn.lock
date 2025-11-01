@@ -3204,7 +3204,7 @@ __metadata:
     typescript: "npm:^5.9.3"
     yn: "npm:^5.1.0"
   bin:
-    eorzea: dist/cli.js
+    eorzea: ./bin/eorzea.js
   languageName: unknown
   linkType: soft
 
