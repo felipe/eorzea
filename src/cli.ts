@@ -2,10 +2,17 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { version, description } from '../package.json';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
 import { fishCommand } from './commands/fish.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+const { version, description } = packageJson;
 
 const program = new Command();
 
