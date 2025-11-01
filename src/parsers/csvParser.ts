@@ -28,17 +28,25 @@ export interface ColumnDefinition {
   definition?: ColumnDefinition; // For nested definitions
 }
 
+export interface CSVParserOptions {
+  resolveForeignKeys?: boolean; // Default: true
+}
+
 export class CSVParser {
   private schemas: Map<string, SchemaDefinition>;
   private cache: Map<string, Map<number, any>>;
   private schemaDir: string;
   private csvDir: string;
+  private options: CSVParserOptions;
 
-  constructor(schemaDir: string, csvDir: string) {
+  constructor(schemaDir: string, csvDir: string, options: CSVParserOptions = {}) {
     this.schemas = new Map();
     this.cache = new Map();
     this.schemaDir = schemaDir;
     this.csvDir = csvDir;
+    this.options = {
+      resolveForeignKeys: options.resolveForeignKeys ?? true,
+    };
   }
 
   /**
@@ -90,6 +98,11 @@ export class CSVParser {
     if (def.converter?.type === 'link') {
       const targetId = parseInt(rawValue);
       if (targetId === 0 || isNaN(targetId)) return null;
+
+      // If foreign key resolution is disabled, just return the ID
+      if (!this.options.resolveForeignKeys) {
+        return targetId;
+      }
 
       // Try to recursively parse linked sheet
       // If schema/csv doesn't exist, just return the raw ID

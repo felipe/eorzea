@@ -27,9 +27,7 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
   // Search for character by name
   if (!characterName) {
     console.log(chalk.red('Error: Character name is required'));
-    console.log(
-      chalk.yellow('Use --name <name> or set DEFAULT_CHARACTER_NAME in your .env file')
-    );
+    console.log(chalk.yellow('Use --name <name> or set DEFAULT_CHARACTER_NAME in your .env file'));
     return;
   }
 
@@ -71,7 +69,22 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
     }
   } catch (error) {
     spinner.fail(chalk.red('Failed to search for character'));
-    console.error(chalk.red((error as Error).message));
+
+    // Check for network errors (offline)
+    const errorMessage = (error as Error).message;
+    if (
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('fetch failed')
+    ) {
+      console.error(chalk.yellow('\n⚠️  Character lookup is not available offline'));
+      console.error(
+        chalk.yellow('   This feature requires an internet connection to access Lodestone.')
+      );
+    } else {
+      console.error(chalk.red(errorMessage));
+    }
   }
 }
 
@@ -91,7 +104,9 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
     // Display character information
     console.log(chalk.bold.cyan('\n=== Character Information ===\n'));
     console.log(`${chalk.bold('Name:')} ${character.name}`);
-    console.log(`${chalk.bold('Server:')} ${character.server} ${character.dataCenter ? `(${character.dataCenter})` : ''}`);
+    console.log(
+      `${chalk.bold('Server:')} ${character.server} ${character.dataCenter ? `(${character.dataCenter})` : ''}`
+    );
 
     if (character.job && character.level) {
       console.log(`${chalk.bold('Active Class/Job:')} ${character.job} (Level ${character.level})`);
@@ -113,17 +128,47 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
         console.log(chalk.bold.cyan('\n=== Class/Job Levels ===\n'));
 
         // Display combat jobs
-        const combatJobs = ['Paladin', 'Warrior', 'Darkknight', 'Gunbreaker', 'Whitemage', 'Scholar', 'Astrologian', 'Sage',
-                           'Monk', 'Dragoon', 'Ninja', 'Samurai', 'Reaper', 'Bard', 'Machinist', 'Dancer',
-                           'Blackmage', 'Summoner', 'Redmage', 'Bluemage'];
-        const crafters = ['Carpenter', 'Blacksmith', 'Armorer', 'Goldsmith', 'Leatherworker', 'Weaver', 'Alchemist', 'Culinarian'];
+        const combatJobs = [
+          'Paladin',
+          'Warrior',
+          'Darkknight',
+          'Gunbreaker',
+          'Whitemage',
+          'Scholar',
+          'Astrologian',
+          'Sage',
+          'Monk',
+          'Dragoon',
+          'Ninja',
+          'Samurai',
+          'Reaper',
+          'Bard',
+          'Machinist',
+          'Dancer',
+          'Blackmage',
+          'Summoner',
+          'Redmage',
+          'Bluemage',
+        ];
+        const crafters = [
+          'Carpenter',
+          'Blacksmith',
+          'Armorer',
+          'Goldsmith',
+          'Leatherworker',
+          'Weaver',
+          'Alchemist',
+          'Culinarian',
+        ];
         const gatherers = ['Miner', 'Botanist', 'Fisher'];
 
         const displayJobs = (title: string, jobs: string[]) => {
-          const leveled = jobs.filter(job => classJobs[job]?.Level && parseInt(classJobs[job].Level) > 0);
+          const leveled = jobs.filter(
+            (job) => classJobs[job]?.Level && parseInt(classJobs[job].Level) > 0
+          );
           if (leveled.length > 0) {
             console.log(chalk.bold(`${title}:`));
-            leveled.forEach(job => {
+            leveled.forEach((job) => {
               const level = classJobs[job].Level || '0';
               console.log(`  ${job}: ${chalk.green(level)}`);
             });
@@ -143,6 +188,21 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
     console.log('');
   } catch (error) {
     spinner.fail(chalk.red('Failed to fetch character details'));
-    console.error(chalk.red((error as Error).message));
+
+    // Check for network errors (offline)
+    const errorMessage = (error as Error).message;
+    if (
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('fetch failed')
+    ) {
+      console.error(chalk.yellow('\n⚠️  Character lookup is not available offline'));
+      console.error(
+        chalk.yellow('   This feature requires an internet connection to access Lodestone.')
+      );
+    } else {
+      console.error(chalk.red(errorMessage));
+    }
   }
 }
