@@ -40,6 +40,8 @@ const FILES_TO_DOWNLOAD = [
   'Level',
   'ENpcResident',
   'Item',
+  'BNpcName', // Enemy names for combat objectives
+  'EObjName', // Object names for interact objectives
 ];
 
 interface DownloadResult {

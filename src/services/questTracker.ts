@@ -170,6 +170,7 @@ export class QuestTrackerService {
       targetEndId: row.target_end_id || null,
       type: row.type || undefined,
       sortKey: row.sort_key || undefined,
+      objectives: row.objectives ? JSON.parse(row.objectives) : undefined,
     };
   }
 }
