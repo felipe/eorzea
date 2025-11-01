@@ -13,7 +13,9 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "update-fish-data": "./scripts/update-fish-data.sh",
-    "seed-fish-db": "tsx scripts/seed-fish-db.ts"
+    "seed-fish-db": "tsx scripts/seed-fish-db.ts",
+    "update-quest-data": "tsx scripts/download-quest-data.ts && tsx scripts/parse-quest-data.ts && tsx scripts/seed-quest-db.ts",
+    "seed-quest-db": "tsx scripts/seed-quest-db.ts"
   },
   "keywords": [
     "ffxiv",
@@ -30,16 +32,13 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@xivapi/js": "https://github.com/c0reme/xivapi-js.git#v2-upgrade",
-    "@xivapi/nodestone": "^0.2.7",
     "better-sqlite3": "^12.4.1",
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
     "commander": "^14.0.1",
     "dotenv": "^17.2.3",
     "inquirer": "^12.10.0",
-    "ora": "^9.0.0",
-    "playwright": "^1.56.1"
+    "ora": "^9.0.0"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.6",

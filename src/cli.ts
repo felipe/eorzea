@@ -5,7 +5,6 @@ import chalk from 'chalk';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
 import { fishCommand } from './commands/fish.js';
 
@@ -17,18 +16,6 @@ const { version, description } = packageJson;
 const program = new Command();
 
 program.name('eorzea').description(description).version(version);
-
-// Character commands
-program
-  .command('character')
-  .alias('char')
-  .description('Manage and view character information')
-  .option('-n, --name <name>', 'Character name')
-  .option('-s, --server <server>', 'Server name')
-  .option('-i, --id <id>', 'Character ID (for direct lookup)')
-  .action(async (options) => {
-    await characterCommand(options);
-  });
 
 // Quest commands
 program
