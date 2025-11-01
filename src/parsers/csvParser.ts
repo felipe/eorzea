@@ -91,9 +91,15 @@ export class CSVParser {
       const targetId = parseInt(rawValue);
       if (targetId === 0 || isNaN(targetId)) return null;
 
-      // Recursively parse linked sheet
-      const targetSheet = this.parseSheet(def.converter.target!);
-      return targetSheet.get(targetId) || null;
+      // Try to recursively parse linked sheet
+      // If schema/csv doesn't exist, just return the raw ID
+      try {
+        const targetSheet = this.parseSheet(def.converter.target!);
+        return targetSheet.get(targetId) || null;
+      } catch (error) {
+        // Schema or CSV not found, return raw ID instead
+        return targetId;
+      }
     }
 
     // Handle type conversion
