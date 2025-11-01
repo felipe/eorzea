@@ -22,7 +22,7 @@ program.name('eorzea').description(description).version(version);
 program
   .command('character')
   .alias('char')
-  .description('Manage and view character information')
+  .description('Manage and view character information (requires internet)')
   .option('-n, --name <name>', 'Character name')
   .option('-s, --server <server>', 'Server name')
   .option('-i, --id <id>', 'Character ID (for direct lookup)')
