@@ -5,13 +5,11 @@ import chalk from 'chalk';
 import { version, description } from '../package.json';
 import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
+import { fishCommand } from './commands/fish.js';
 
 const program = new Command();
 
-program
-  .name('eorzea')
-  .description(description)
-  .version(version);
+program.name('eorzea').description(description).version(version);
 
 // Character commands
 program
@@ -34,6 +32,21 @@ program
   .option('-i, --id <id>', 'Get details for a specific quest')
   .action(async (options) => {
     await questCommand(options);
+  });
+
+// Fish commands
+program
+  .command('fish')
+  .description('View fishing information and track fish')
+  .option('-i, --id <id>', 'Get details for a specific fish')
+  .option('-b, --big', 'Show big fish only')
+  .option('-p, --patch <patch>', 'Filter by patch (e.g., 2.0, 6.0)')
+  .option('-l, --location <location>', 'Filter by location ID')
+  .option('-a, --available', 'Show fish available at current Eorzean time')
+  .option('--aquarium', 'Show aquarium fish only')
+  .option('--limit <limit>', 'Limit number of results (default: 20)')
+  .action(async (options) => {
+    await fishCommand(options);
   });
 
 // Location commands

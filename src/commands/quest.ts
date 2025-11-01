@@ -53,21 +53,19 @@ async function searchQuests(apiClient: any, query: string): Promise<void> {
       return;
     }
 
-    spinner.succeed(
-      chalk.green(`Found ${results.results.length} quest(s)`)
-    );
+    spinner.succeed(chalk.green(`Found ${results.results.length} quest(s)`));
 
     displayQuestTableV2(results.results);
 
     if (results.next) {
       console.log(
-        chalk.yellow(
-          `\nMore results available. Use the 'next' cursor to fetch additional pages.`
-        )
+        chalk.yellow(`\nMore results available. Use the 'next' cursor to fetch additional pages.`)
       );
     }
 
-    console.log(chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest'));
+    console.log(
+      chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest')
+    );
   } catch (error) {
     spinner.fail(chalk.red('Failed to search quests'));
     console.error(chalk.red((error as Error).message));
@@ -89,7 +87,9 @@ async function listQuestsByLevel(apiClient: any, level: number): Promise<void> {
 
     displayQuestTableV2(results.results);
 
-    console.log(chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest'));
+    console.log(
+      chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest')
+    );
   } catch (error) {
     spinner.fail(chalk.red('Failed to fetch quests'));
     console.error(chalk.red((error as Error).message));
@@ -113,7 +113,18 @@ async function fetchQuestById(apiClient: any, questId: number): Promise<void> {
     console.log(chalk.bold.cyan('\n=== Quest Information ===\n'));
     console.log(`${chalk.bold('Name:')} ${quest.fields.Name || 'Unknown'}`);
     console.log(`${chalk.bold('ID:')} ${quest.row_id}`);
-    console.log(`${chalk.bold('Level:')} ${quest.fields.ClassJobLevel0 || 'N/A'}`);
+
+    // Level and class requirements
+    const level = quest.fields.ClassJobLevel?.[0] || quest.fields.ClassJobLevel0;
+    if (level) {
+      console.log(`${chalk.bold('Level Required:')} ${level}`);
+    }
+
+    if (quest.fields.ClassJobRequired?.fields?.Name) {
+      const className = quest.fields.ClassJobRequired.fields.Name;
+      const classDisplay = className.charAt(0).toUpperCase() + className.slice(1);
+      console.log(`${chalk.bold('Class Required:')} ${classDisplay}`);
+    }
 
     if (quest.fields.JournalGenre?.fields?.Name) {
       console.log(`${chalk.bold('Type:')} ${quest.fields.JournalGenre.fields.Name}`);
@@ -130,28 +141,49 @@ async function fetchQuestById(apiClient: any, questId: number): Promise<void> {
       );
     }
 
-    // Show additional quest information
+    // Prerequisites
+    if (quest.fields.PreviousQuest && Array.isArray(quest.fields.PreviousQuest)) {
+      const prereqs = quest.fields.PreviousQuest.filter((q: any) => q?.row_id > 0);
+      if (prereqs.length > 0) {
+        console.log(chalk.bold('\nPrerequisites:'));
+        prereqs.forEach((prereq: any) => {
+          const prereqName = prereq.fields?.Name || 'Unknown Quest';
+          console.log(
+            `  ${chalk.yellow('→')} ${prereqName} ${chalk.dim(`(ID: ${prereq.row_id})`)}`
+          );
+        });
+      }
+    }
+
+    // Rewards section
+    console.log(chalk.bold('\nRewards:'));
+
     if (quest.fields.GilReward) {
-      console.log(`${chalk.bold('Gil Reward:')} ${quest.fields.GilReward}`);
+      console.log(`  ${chalk.yellow('Gil:')} ${quest.fields.GilReward.toLocaleString()}`);
     }
 
     if (quest.fields.ExpFactor) {
-      console.log(`${chalk.bold('Experience Factor:')} ${quest.fields.ExpFactor}`);
-    }
-
-    if (quest.fields.IsRepeatable !== undefined) {
-      console.log(`${chalk.bold('Repeatable:')} ${quest.fields.IsRepeatable ? 'Yes' : 'No'}`);
-    }
-
-    if (quest.fields.Expansion?.fields?.Name) {
-      console.log(`${chalk.bold('Expansion:')} ${quest.fields.Expansion.fields.Name}`);
+      console.log(`  ${chalk.blue('Experience Factor:')} ${quest.fields.ExpFactor}`);
     }
 
     if (quest.fields.ItemRewardType && Array.isArray(quest.fields.ItemRewardType)) {
       const items = quest.fields.ItemRewardType.filter((item: any) => item?.value > 0);
       if (items.length > 0) {
-        console.log(`${chalk.bold('Item Rewards:')} ${items.length} item(s)`);
+        console.log(`  ${chalk.green('Item Rewards:')} ${items.length} item(s)`);
       }
+    }
+
+    // Additional info
+    console.log(chalk.bold('\nAdditional Info:'));
+
+    if (quest.fields.IsRepeatable !== undefined) {
+      console.log(
+        `  ${chalk.bold('Repeatable:')} ${quest.fields.IsRepeatable ? chalk.green('Yes') : chalk.gray('No')}`
+      );
+    }
+
+    if (quest.fields.Expansion?.fields?.Name) {
+      console.log(`  ${chalk.bold('Expansion:')} ${quest.fields.Expansion.fields.Name}`);
     }
 
     console.log('');
