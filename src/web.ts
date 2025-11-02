@@ -12,6 +12,7 @@ import {
   getNextWindowStart,
   getCurrentWindowEnd,
 } from './utils/eorzeanTime.js';
+import { getPreviousWeatherPeriodStart, calculateWeather } from './utils/weatherForecast.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -411,12 +412,29 @@ app.get('/fish/:id', (req, res) => {
   // Check if weather matches (if fish has weather requirements)
   let weatherMatches = true;
   let currentWeather: number | null = null;
+  let previousWeather: number | null = null;
+
   if (fish && (fish.weatherSet.length > 0 || fish.previousWeatherSet.length > 0)) {
     currentWeather = fishTracker.getCurrentWeather(fish);
+
+    // Check current weather requirement
     if (fish.weatherSet.length > 0 && currentWeather !== null) {
       weatherMatches = fish.weatherSet.includes(currentWeather);
     }
-    // Note: Previous weather checking is handled by getNextAvailableWindow()
+
+    // Check previous weather requirement
+    if (weatherMatches && fish.previousWeatherSet.length > 0 && fish.location) {
+      const weatherRates = fishTracker.getWeatherRatesForSpot(fish.location);
+      if (weatherRates) {
+        const prevPeriodStart = getPreviousWeatherPeriodStart(now);
+        previousWeather = calculateWeather(prevPeriodStart, weatherRates);
+        if (previousWeather !== null) {
+          weatherMatches = weatherMatches && fish.previousWeatherSet.includes(previousWeather);
+        } else {
+          weatherMatches = false;
+        }
+      }
+    }
   }
 
   const isAvailable = timeMatches && weatherMatches;

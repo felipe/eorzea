@@ -98,12 +98,13 @@ export function forecastWeather(
     const periodEnd = new Date(currentPeriodStart.getTime() + WEATHER_PERIOD_SECONDS * 1000);
     const weatherId = calculateWeather(currentPeriodStart, weatherRates);
 
-    // Get previous weather if not first period
+    // Get previous weather
     let previousWeatherId: number | undefined;
     if (i > 0) {
+      // Use previous forecast period's weather
       previousWeatherId = forecasts[i - 1].weatherId;
-    } else if (currentPeriodStart.getTime() > startTime.getTime()) {
-      // Calculate actual previous weather
+    } else {
+      // First period: calculate actual previous weather from before this period started
       const prevPeriodStart = getPreviousWeatherPeriodStart(currentPeriodStart);
       previousWeatherId = calculateWeather(prevPeriodStart, weatherRates);
     }
