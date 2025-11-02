@@ -227,14 +227,18 @@ async function seedDatabase(): Promise<void> {
       if (data.FISHING_SPOTS) {
         console.log('  Inserting fishing spots...');
         for (const spot of Object.values(data.FISHING_SPOTS)) {
+          // Look up zone_id from weather rates using territory_id
+          const territoryWeather = data.WEATHER_RATES[spot.territory_id];
+          const zoneId = territoryWeather?.zone_id || null;
+
           insertSpot.run(
             spot._id,
-            spot.zoneid,
-            spot.territory || null,
-            spot.x || null,
-            spot.y || null,
-            spot.radius || null,
-            spot.category || null
+            zoneId,
+            spot.territory_id || null,
+            spot.map_coords?.[0] || null,
+            spot.map_coords?.[1] || null,
+            spot.map_coords?.[2] || null,
+            null // category
           );
           counts.spots++;
         }
