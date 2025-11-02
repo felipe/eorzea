@@ -133,6 +133,32 @@ async function fetchQuestById(questTracker: QuestTrackerService, questId: number
     });
   }
 
+  // Objectives section
+  if (quest.objectives && quest.objectives.length > 0) {
+    console.log(chalk.bold('\nObjectives:'));
+    console.log(chalk.dim('━'.repeat(80)));
+
+    quest.objectives.forEach((obj: any) => {
+      if (obj.type === 'fish') {
+        displayFishObjective(obj);
+      } else if (obj.type === 'item') {
+        displayItemObjective(obj);
+      } else if (obj.type === 'enemy') {
+        displayEnemyObjective(obj);
+      } else if (obj.type === 'npc') {
+        displayNPCObjective(obj);
+      } else if (obj.type === 'interact') {
+        displayInteractObjective(obj);
+      } else {
+        console.log(
+          `\n  ${chalk.cyan(obj.index + '.')} ${chalk.yellow(obj.type)}: ${obj.targetName} ${chalk.dim(`(qty: ${obj.quantity})`)}`
+        );
+      }
+    });
+
+    console.log(chalk.dim('━'.repeat(80)));
+  }
+
   // Rewards section
   if (quest.gilReward || quest.expFactor) {
     console.log(chalk.bold('\nRewards:'));
@@ -186,4 +212,92 @@ function displayQuestTable(quests: any[]): void {
   });
 
   console.log(table.toString());
+}
+
+function tugSymbol(tug: string): string {
+  switch (tug.toLowerCase()) {
+    case 'light':
+      return '!';
+    case 'medium':
+      return '!!';
+    case 'heavy':
+      return '!!!';
+    default:
+      return tug;
+  }
+}
+
+function displayFishObjective(obj: any): void {
+  const fish = obj.details?.fish;
+  if (!fish) {
+    console.log(
+      `\n  ${chalk.cyan(obj.index + '.')} ${chalk.yellow('🎣 Fish')}: ${obj.targetName} ${chalk.dim(`(qty: ${obj.quantity})`)}`
+    );
+    return;
+  }
+
+  console.log(chalk.bold.cyan(`\n  ${obj.index}. 🎣 Catch ${obj.quantity}x ${obj.targetName}`));
+  console.log(`     ${chalk.gray('Location:')} ${fish.locationName}`);
+  console.log(`     ${chalk.gray('Time:')} ${fish.timeWindow}`);
+
+  if (fish.weather && fish.weather.length > 0) {
+    console.log(`     ${chalk.gray('Weather:')} ${fish.weather.join(', ')}`);
+  }
+
+  if (fish.previousWeather && fish.previousWeather.length > 0) {
+    console.log(`     ${chalk.gray('Previous Weather:')} ${fish.previousWeather.join(', ')}`);
+  }
+
+  if (fish.baitChain && fish.baitChain.length > 0) {
+    console.log(`     ${chalk.gray('Bait:')} ${fish.baitChain.join(' → ')}`);
+  }
+
+  console.log(`     ${chalk.gray('Hookset:')} ${fish.hookset}`);
+  console.log(`     ${chalk.gray('Tug:')} ${tugSymbol(fish.tug)}`);
+
+  const flags = [];
+  if (fish.bigFish) flags.push(chalk.yellow('Big Fish'));
+  if (fish.folklore) flags.push(chalk.magenta('Folklore'));
+  if (fish.fishEyes) flags.push(chalk.blue('Fish Eyes'));
+  if (fish.snagging) flags.push(chalk.red('Snagging'));
+
+  if (flags.length > 0) {
+    console.log(`     ${chalk.gray('Special:')} ${flags.join(', ')}`);
+  }
+
+  console.log(chalk.dim(`     💡 eorzea fish --id ${obj.targetId}`));
+}
+
+function displayItemObjective(obj: any): void {
+  const item = obj.details?.item;
+  console.log(
+    `\n  ${chalk.cyan(obj.index + '.')} ${chalk.yellow('📦 Item')}: ${obj.targetName} ${chalk.dim(`(qty: ${obj.quantity})`)}`
+  );
+  if (item?.itemId) {
+    console.log(chalk.dim(`     Item ID: ${item.itemId}`));
+  }
+}
+
+function displayEnemyObjective(obj: any): void {
+  const enemy = obj.details?.enemy;
+  console.log(
+    `\n  ${chalk.cyan(obj.index + '.')} ${chalk.red('⚔️  Enemy')}: ${obj.targetName} ${chalk.dim(`(qty: ${obj.quantity})`)}`
+  );
+  if (enemy?.enemyId) {
+    console.log(chalk.dim(`     Enemy ID: ${enemy.enemyId}`));
+  }
+}
+
+function displayNPCObjective(obj: any): void {
+  const npc = obj.details?.npc;
+  console.log(`\n  ${chalk.cyan(obj.index + '.')} ${chalk.green('💬 NPC')}: ${obj.targetName}`);
+  if (npc?.npcId) {
+    console.log(chalk.dim(`     NPC ID: ${npc.npcId}`));
+  }
+}
+
+function displayInteractObjective(obj: any): void {
+  console.log(
+    `\n  ${chalk.cyan(obj.index + '.')} ${chalk.blue('🔍 Interact')}: ${obj.targetName} ${chalk.dim(`(qty: ${obj.quantity})`)}`
+  );
 }
