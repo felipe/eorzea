@@ -130,6 +130,47 @@ app.get('/style.css', (_req, res) => {
   `);
 });
 
+// Serve Eorzean Time Clock JavaScript
+app.get('/clock.js', (_req, res) => {
+  res.type('application/javascript');
+  res.send(`
+    // Eorzean Time Clock
+    const EORZEA_MULTIPLIER = 3600 / 175; // 20.571428571...
+    
+    function updateEorzeanClock() {
+      const now = new Date();
+      const epochTime = now.getTime();
+      const eorzeanMillis = epochTime * EORZEA_MULTIPLIER;
+      
+      const totalSeconds = Math.floor(eorzeanMillis / 1000);
+      const hours = Math.floor(totalSeconds / 3600) % 24;
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      
+      const timeString = 
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0');
+      
+      const clock = document.getElementById('et-clock');
+      if (clock) {
+        clock.textContent = '⏰ ET ' + timeString;
+      }
+    }
+    
+    // Start clock when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        updateEorzeanClock();
+        setInterval(updateEorzeanClock, 1000);
+      });
+    } else {
+      updateEorzeanClock();
+      setInterval(updateEorzeanClock, 1000);
+    }
+  `);
+});
+
 // Home Page
 app.get('/', (_req, res) => {
   const et = getEorzeanTime(new Date());
@@ -148,7 +189,7 @@ app.get('/', (_req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <h1>🎮 Eorzea Tracker</h1>
         
@@ -188,7 +229,9 @@ app.get('/', (_req, res) => {
         </div>
       </div>
 
+      <script src="/clock.js"></script>
       <script>
+        // Page-specific search handlers
         document.getElementById('fishSearch').addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             const val = e.target.value.trim();
@@ -234,7 +277,7 @@ app.get('/fish', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>🎣 Fish ${bigOnly ? '(Big Fish)' : folkloreOnly ? '(Folklore)' : ''}</h1>
@@ -277,6 +320,7 @@ app.get('/fish', (req, res) => {
           )
           .join('')}
       </div>
+      <script src="/clock.js"></script>
     </body>
     </html>
   `);
@@ -298,7 +342,7 @@ app.get('/fish/available', (_req, res) => {
       <meta http-equiv="refresh" content="60">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>🕐 Available Now</h1>
@@ -340,6 +384,7 @@ app.get('/fish/available', (_req, res) => {
           )
           .join('')}
       </div>
+      <script src="/clock.js"></script>
     </body>
     </html>
   `);
@@ -368,6 +413,7 @@ app.get('/fish/:id', (req, res) => {
             <p>Fish ID ${fishId} doesn't exist</p>
           </div>
         </div>
+        <script src="/clock.js"></script>
       </body>
       </html>
     `);
@@ -384,7 +430,7 @@ app.get('/fish/:id', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/fish" class="back-link">← Back to Fish</a>
         <h1>🎣 Fish ${fish._id}</h1>
@@ -499,6 +545,7 @@ app.get('/fish/:id', (req, res) => {
             : ''
         }
       </div>
+      <script src="/clock.js"></script>
     </body>
     </html>
   `);
@@ -529,7 +576,7 @@ app.get('/quests', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>📜 Quests ${search ? `"${search}"` : level ? `(Level ${level})` : ''}</h1>
@@ -575,6 +622,7 @@ app.get('/quests', (req, res) => {
           )
           .join('')}
       </div>
+      <script src="/clock.js"></script>
     </body>
     </html>
   `);
@@ -603,6 +651,7 @@ app.get('/quest/:id', (req, res) => {
             <p>Quest ID ${questId} doesn't exist</p>
           </div>
         </div>
+        <script src="/clock.js"></script>
       </body>
       </html>
     `);
@@ -619,7 +668,7 @@ app.get('/quest/:id', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/quests" class="back-link">← Back to Quests</a>
         <h1>📜 ${quest.name}</h1>
@@ -761,6 +810,7 @@ app.get('/quest/:id', (req, res) => {
             : ''
         }
       </div>
+      <script src="/clock.js"></script>
     </body>
     </html>
   `);
