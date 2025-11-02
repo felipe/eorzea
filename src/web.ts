@@ -222,7 +222,6 @@ app.get('/fish', (req, res) => {
     limit: 100,
   });
 
-
   res.send(`
     <!DOCTYPE html>
     <html>
@@ -346,6 +345,7 @@ app.get('/fish/available', (_req, res) => {
 app.get('/fish/:id', (req, res) => {
   const fishId = parseInt(req.params.id);
   const fish = fishTracker.getFishById(fishId);
+  const quests = questTracker.getQuestsRequiringFish(fishId);
 
   if (!fish) {
     return res.status(404).send(`
@@ -369,7 +369,6 @@ app.get('/fish/:id', (req, res) => {
       </html>
     `);
   }
-
 
   res.send(`
     <!DOCTYPE html>
@@ -480,24 +479,52 @@ app.get('/fish/:id', (req, res) => {
         ${
           fish.aquarium
             ? `
-        <div class="card">
-          <h2>🐠 Aquarium</h2>
-          <div class="info-row">
-            <span class="label">Water Type</span>
-            <span class="value">${fish.aquarium.water}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Size</span>
-            <span class="value">${fish.aquarium.size}</span>
-          </div>
-        </div>
-        `
+         <div class="card">
+           <h2>🐠 Aquarium</h2>
+           <div class="info-row">
+             <span class="label">Water Type</span>
+             <span class="value">${fish.aquarium.water}</span>
+           </div>
+           <div class="info-row">
+             <span class="label">Size</span>
+             <span class="value">${fish.aquarium.size}</span>
+           </div>
+         </div>
+         `
             : ''
         }
-      </div>
-    </body>
-    </html>
-  `);
+
+         ${
+           quests.length > 0
+             ? `
+         <div class="card">
+           <h2>📜 Used in Quests</h2>
+           <p style="color: #aaa; margin-bottom: 12px;">
+             This fish is required for ${quests.length} quest${quests.length > 1 ? 's' : ''}
+           </p>
+           ${quests
+             .map(
+               (q) => `
+             <div style="padding: 8px 0; border-bottom: 1px solid #0f3460;">
+               <a href="/quest/${q.id}" style="font-weight: bold; color: #4ecca3;">
+                 ${q.name}
+               </a>
+               <div style="font-size: 0.9em; color: #aaa; margin-top: 4px;">
+                 Level ${q.level}${q.isRepeatable ? ' • Repeatable' : ''}
+               </div>
+             </div>
+           `
+             )
+             .join('')}
+         </div>
+         `
+             : ''
+         }
+       </div>
+       <script src="/clock.js"></script>
+     </body>
+     </html>
+   `);
 });
 
 // Quest List
@@ -513,7 +540,6 @@ app.get('/quests', (req, res) => {
   } else {
     quests = questTracker.searchQuests({ limit: 100 });
   }
-
 
   res.send(`
     <!DOCTYPE html>
@@ -602,7 +628,6 @@ app.get('/quest/:id', (req, res) => {
       </html>
     `);
   }
-
 
   res.send(`
     <!DOCTYPE html>
