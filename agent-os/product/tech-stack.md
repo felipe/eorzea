@@ -1,68 +1,102 @@
 # Tech Stack
 
-## Framework & Runtime
-- **Application Framework:** Node.js with Express (for future API)
-- **Language/Runtime:** Node.js (LTS version, currently v20+)
-- **Package Manager:** yarn (per user preference)
+## Current Stack
+
+### Framework & Runtime
+
+- **Language/Runtime:** Node.js v20+ with TypeScript
+- **Package Manager:** yarn 4.9.2
 - **CLI Framework:** Commander.js for command parsing, Inquirer.js for interactive prompts
 
-## CLI Development
-- **CLI Framework:** Commander.js (command-line interface framework)
-- **Interactive Prompts:** Inquirer.js (for user input and selections)
-- **Terminal Output:** Chalk (for colored output), cli-table3 (for formatted tables)
-- **Progress Indicators:** ora (for loading spinners during API calls)
+### CLI Tools
 
-## Backend (Future API Development)
-- **API Framework:** Express.js or Fastify (for RESTful API)
-- **API Documentation:** Swagger/OpenAPI specification
-- **Authentication:** JWT tokens for API access
-- **Rate Limiting:** express-rate-limit or fastify-rate-limit
+- **Terminal Output:** Chalk (colored output), cli-table3 (formatted tables)
+- **Progress Indicators:** ora (loading spinners)
+- **Interactive Prompts:** Inquirer.js
 
-## Database & Storage
-- **Database:** SQLite (for local quest/character data caching)
-- **ORM/Query Builder:** Prisma (type-safe database access)
-- **Caching:** In-memory cache with node-cache, SQLite for persistent cache
+### Web Server
 
-## Data Sources & External APIs
-- **FFXIV Data API:** XIVAPI (https://xivapi.com) - primary source for quest, item, and game data
-- **Character Data:** Lodestone (official FFXIV character profiles) via XIVAPI or lodestone-parser
-- **Fallback Data:** Garland Tools API, Consolegameswiki data (if needed)
+- **Framework:** Express.js 5.1.0
+- **Purpose:** Mobile-optimized web view for fish and quest browsing
+- **Features:** Embedded CSS, server-side rendering, mobile-responsive design
 
-## Testing & Quality
-- **Test Framework:** Jest (unit and integration testing)
-- **Test Coverage:** Jest coverage reports
-- **Linting/Formatting:** ESLint (code linting), Prettier (code formatting)
-- **Type Safety:** TypeScript (for type checking and better IDE support)
+### Database & Storage
 
-## Development Tools
-- **TypeScript:** For type safety across CLI and future API
-- **Nodemon:** For development hot-reloading
-- **dotenv:** For environment variable management (API keys, cache settings)
+- **Database:** SQLite with better-sqlite3
+- **Schema:**
+  - `fish` table (1,088 entries)
+  - `quests` table (5,277 entries with objectives)
+- **No ORM:** Direct SQL queries for performance
 
-## Deployment & Infrastructure
-- **CLI Distribution:** npm package (published to npm registry)
-- **API Hosting:** Cloudflare Workers, Heroku, or Railway (for future API deployment)
-- **CI/CD:** GitHub Actions (automated testing and deployment)
-- **Version Control:** Git with GitHub
+### Data Sources
 
-## Frontend (Future Development)
-- **JavaScript Framework:** React or Next.js
-- **CSS Framework:** Tailwind CSS
-- **UI Components:** shadcn/ui or custom component library
-- **State Management:** React Query (for API data fetching and caching)
+- **Fish Data:** Carbuncle Plushy Fish Tracker (https://ff14fish.carbuncleplushy.com)
+- **Game Data:** xivapi/ffxiv-datamining CSV files (Quest, Item, BNpcName, ENpcResident, etc.)
+- **CSV Parsing:** SaintCoinach structure reference
+- **Character Data:** Lodestone via @xivapi/nodestone scraper
+- **Data Format:** JSON for fish-data.json, CSV for game data, SQLite for runtime queries
 
-## Configuration Management
-- **Environment Variables:** dotenv for local development
-- **Config Files:** cosmiconfig for user preferences (JSON/YAML config files)
-- **User Settings:** Local config file (~/.eorzea/config.yml) for character defaults, API keys
+### Testing & Quality
 
-## Monitoring & Logging
-- **Logging:** Winston or Pino (structured logging)
-- **Error Tracking:** Sentry (for production error monitoring)
-- **Analytics:** Optional telemetry for API usage (opt-in only)
+- **Test Framework:** Jest (93 passing tests)
+- **Coverage:** 82% on services, 64% overall
+- **Linting:** ESLint
+- **Formatting:** Prettier
+- **Type Safety:** TypeScript strict mode
 
-## Security Considerations
-- **API Key Management:** User-provided XIVAPI keys stored in local config
-- **Rate Limiting:** Respect XIVAPI rate limits (prevent abuse)
-- **Data Privacy:** No personal data collection, local-only quest tracking
-- **Input Validation:** Joi or Zod for validating user inputs and API responses
+### Configuration
+
+- **Environment Variables:** dotenv for character defaults
+- **Config Files:** Local .env file for user preferences
+
+### Data Processing Scripts
+
+- **CSV Download:** Direct fetch from xivapi/ffxiv-datamining
+- **Data Parsing:**
+  - `parse-quest-data.ts` - Quest CSV parsing with ObjectiveParser
+  - `parse-fish-data.ts` - Fish data from Carbuncle Plushy
+- **Database Seeding:**
+  - `seed-quest-db.ts` - Quest data to SQLite
+  - `seed-fish-db.ts` - Fish data to SQLite
+
+## Key Architectural Decisions
+
+### 100% Offline for Core Features
+
+- Quest and fish data stored in local SQLite databases
+- No runtime API calls for quest/fish lookups
+- Only Lodestone requires network access (character profiles)
+
+### CLI + Web Hybrid
+
+- CLI for terminal users (primary interface)
+- Web view for mobile access (secondary interface)
+- Shared TypeScript services between CLI and web
+
+### Direct CSV Parsing
+
+- Parse FFXIV CSV files directly instead of using APIs
+- More control over data structure
+- Faster queries with local SQLite
+- No rate limiting concerns
+
+## Future Considerations
+
+### API Layer
+
+- Express.js API could expose quest/fish data as REST endpoints
+- Would enable native iOS/Android apps
+- JWT authentication for API access
+- Rate limiting with express-rate-limit
+
+### Frontend Development
+
+- React or Next.js for full web application
+- Could consume the API layer
+- Progressive Web App (PWA) for installable mobile experience
+
+### Deployment
+
+- Railway or Fly.io for web/API hosting
+- Persistent volumes for SQLite databases
+- GitHub Actions for CI/CD
