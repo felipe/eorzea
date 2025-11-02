@@ -190,6 +190,23 @@ See `agent-os/product/roadmap.md` for the full development roadmap.
 - **Testing**: Jest with ts-jest
 - **Web Scraping**: Cheerio for HTML parsing
 
+## Acknowledgments
+
+This project is built on the shoulders of the FFXIV community! We're grateful to:
+
+- **[Carbuncle Plushy Fish Tracker](https://github.com/icykoneko/ff14-fish-tracker-app)** by icykoneko - Fish data
+- **[xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining)** - Game data CSVs
+- **[SaintCoinach](https://github.com/xivapi/SaintCoinach)** - CSV extraction tools
+- **[Garland Tools](https://www.garlandtools.org/)**, **[XIVAPI](https://xivapi.com/)**, **[Teamcraft](https://ffxivteamcraft.com/)** - Inspiration
+
+See [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for complete details.
+
+## Legal
+
+FINAL FANTASY XIV © 2010-2024 SQUARE ENIX CO., LTD. All Rights Reserved.
+
+This project is not affiliated with or endorsed by Square Enix.
+
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) for details.
