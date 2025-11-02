@@ -249,18 +249,68 @@ export class FishTrackerService {
     const windowStart = nextWeatherWindow.startTime;
     const windowEnd = nextWeatherWindow.endTime;
 
-    // Check every minute within the weather window for time match
-    let checkTime = new Date(windowStart);
-    while (checkTime < windowEnd) {
-      const et = getEorzeanTime(checkTime);
-      if (isInTimeWindow(et.hours, fish.startHour, fish.endHour)) {
-        return checkTime;
-      }
-      checkTime = new Date(checkTime.getTime() + 60 * 1000); // Check every minute
-    }
+    // Get the ET hour when this weather period starts
+    const weatherStartET = getEorzeanTime(windowStart);
 
-    // If time doesn't match in this weather window, recursively check next
-    return this.getNextAvailableWindow(fish, windowEnd);
+    // Calculate if the fish's time window overlaps with this weather period
+    // This follows Carbuncle Plushy's logic in availableRangeDuring()
+    const fishStartHour = fish.startHour;
+    const fishEndHour = fish.endHour;
+
+    if (fishEndHour < fishStartHour) {
+      // Fish time wraps around midnight (e.g., 20:00-4:00)
+      if (weatherStartET.hours < fishEndHour) {
+        // Weather starts before fish window ends (e.g., weather at 0:00, fish ends at 4:00)
+        // The fish window actually started YESTERDAY and may have already ended
+        // We need to check if we're still within that window
+        const fishWindowStart = new Date(
+          windowStart.getTime() - (24 - fishStartHour + weatherStartET.hours) * 175 * 1000
+        );
+        const fishWindowEnd = new Date(
+          fishWindowStart.getTime() + (24 - fishStartHour + fishEndHour) * 175 * 1000
+        );
+
+        // Check if the current time falls within this window
+        if (from >= fishWindowStart && from < fishWindowEnd) {
+          return from; // Available right now
+        }
+        // If we've passed the end, this weather period doesn't work
+        if (from >= fishWindowEnd) {
+          return this.getNextAvailableWindow(fish, windowEnd);
+        }
+        // Otherwise, return when the window starts
+        return fishWindowStart > from ? fishWindowStart : from;
+      } else {
+        // Weather starts after fish window ended (e.g., weather at 8:00, fish ended at 4:00)
+        // The fish window starts LATER in this weather period
+        const fishWindowStart = new Date(
+          windowStart.getTime() + (fishStartHour - weatherStartET.hours) * 175 * 1000
+        );
+
+        // Check if this fish window start is still within the weather period
+        if (fishWindowStart < windowEnd) {
+          return fishWindowStart > from ? fishWindowStart : from;
+        }
+        // Fish window starts after weather ends, try next weather period
+        return this.getNextAvailableWindow(fish, windowEnd);
+      }
+    } else {
+      // Fish time doesn't wrap (e.g., 8:00-16:00)
+      if (weatherStartET.hours < fishEndHour) {
+        // Weather period might overlap with fish window
+        const fishWindowStart =
+          weatherStartET.hours < fishStartHour
+            ? new Date(windowStart.getTime() + (fishStartHour - weatherStartET.hours) * 175 * 1000)
+            : windowStart;
+
+        // Check if this is still within the weather period
+        if (fishWindowStart < windowEnd) {
+          return fishWindowStart > from ? fishWindowStart : from;
+        }
+      }
+      // No overlap, try next weather period
+      return this.getNextAvailableWindow(fish, windowEnd);
+    }
   }
 
   /**
