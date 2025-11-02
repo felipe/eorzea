@@ -42,6 +42,7 @@ interface QuestData {
   targetEnd: number | null;
   type: number;
   sortKey: number;
+  objectives?: any[]; // Quest objectives
 }
 
 function createSchema(db: Database.Database): void {
@@ -69,7 +70,8 @@ function createSchema(db: Database.Database): void {
       issuer_location_id INTEGER,
       target_end_id INTEGER,
       type INTEGER,
-      sort_key INTEGER
+      sort_key INTEGER,
+      objectives TEXT -- JSON array of quest objectives
     );
   `);
 
@@ -96,7 +98,7 @@ function seedQuests(db: Database.Database, quests: QuestData[]): void {
       previous_quests, gil_reward, exp_factor,
       is_repeatable, can_cancel,
       issuer_start_id, issuer_location_id, target_end_id,
-      type, sort_key
+      type, sort_key, objectives
     ) VALUES (
       @id, @name, @internalId, @level, @levelOffset,
       @classJobCategory, @classJobRequired,
@@ -104,7 +106,7 @@ function seedQuests(db: Database.Database, quests: QuestData[]): void {
       @previousQuests, @gilReward, @expFactor,
       @isRepeatable, @canCancel,
       @issuerStart, @issuerLocation, @targetEnd,
-      @type, @sortKey
+      @type, @sortKey, @objectives
     )
   `);
 
@@ -131,6 +133,7 @@ function seedQuests(db: Database.Database, quests: QuestData[]): void {
         targetEnd: quest.targetEnd,
         type: quest.type,
         sortKey: quest.sortKey,
+        objectives: quest.objectives ? JSON.stringify(quest.objectives) : null,
       });
     }
   });
