@@ -6,7 +6,12 @@
 import express from 'express';
 import { FishTrackerService } from './services/fishTracker.js';
 import { QuestTrackerService } from './services/questTracker.js';
-import { getEorzeanTime } from './utils/eorzeanTime.js';
+import {
+  getEorzeanTime,
+  isInTimeWindow,
+  getNextWindowStart,
+  getCurrentWindowEnd,
+} from './utils/eorzeanTime.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -396,6 +401,13 @@ app.get('/fish/:id', (req, res) => {
   const fish = fishTracker.getFishById(fishId);
   const quests = questTracker.getQuestsRequiringFish(fishId);
 
+  // Calculate availability
+  const now = new Date();
+  const et = getEorzeanTime(now);
+  const isAvailable = isInTimeWindow(et.hours, fish?.startHour || 0, fish?.endHour || 0);
+  const nextStart = fish ? getNextWindowStart(fish.startHour, fish.endHour, now) : null;
+  const currentEnd = fish ? getCurrentWindowEnd(fish.startHour, fish.endHour, now) : null;
+
   if (!fish) {
     return res.status(404).send(`
       <!DOCTYPE html>
@@ -445,12 +457,28 @@ app.get('/fish/:id', (req, res) => {
           </div>
         </div>
 
+        <div class="card" style="border-left-color: ${isAvailable ? '#4ecca3' : '#ff6b6b'}">
+          <h2 style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.5em;">${isAvailable ? '✓' : '⏰'}</span>
+            ${isAvailable ? 'Available Now' : 'Not Available'}
+          </h2>
+          <div style="margin-top: 12px; font-size: 0.95em;">
+            <div style="color: #aaa; margin-bottom: 4px;">Time Window: ${fish.startHour}:00 - ${fish.endHour}:00 ET</div>
+            ${
+              isAvailable && currentEnd
+                ? `<div style="color: #4ecca3; font-weight: 500;">Window closes at ${currentEnd.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (real time)</div>`
+                : ''
+            }
+            ${
+              !isAvailable && nextStart
+                ? `<div style="color: #ff6b6b; font-weight: 500;">Next available at ${nextStart.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (real time)</div>`
+                : ''
+            }
+          </div>
+        </div>
+
         <div class="card">
           <h2>Catch Details</h2>
-          <div class="info-row">
-            <span class="label">⏰ Time Window</span>
-            <span class="value">${fish.startHour}:00 - ${fish.endHour}:00 ET</span>
-          </div>
           ${
             fish.hookset
               ? `
