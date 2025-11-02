@@ -302,7 +302,7 @@ app.get('/fish', (req, res) => {
             (f) => `
           <div class="card">
             <a href="/fish/${f._id}" style="font-size: 1.1em; font-weight: bold;">
-              Fish ID ${f._id}
+              ${f.name || `Fish ID ${f._id}`}
             </a>
             <div style="margin-top: 8px;">
               ${f.bigFish ? '<span class="badge big-fish">⭐ BIG FISH</span>' : ''}
@@ -369,7 +369,7 @@ app.get('/fish/available', (_req, res) => {
             (f) => `
           <div class="card">
             <a href="/fish/${f._id}" style="font-size: 1.1em; font-weight: bold;">
-              Fish ID ${f._id}
+              ${f.name || `Fish ID ${f._id}`}
             </a>
             <div style="margin-top: 8px;">
               ${f.bigFish ? '<span class="badge big-fish">⭐ BIG FISH</span>' : ''}
@@ -394,6 +394,7 @@ app.get('/fish/available', (_req, res) => {
 app.get('/fish/:id', (req, res) => {
   const fishId = parseInt(req.params.id);
   const fish = fishTracker.getFishById(fishId);
+  const quests = questTracker.getQuestsRequiringFish(fishId);
 
   if (!fish) {
     return res.status(404).send(`
@@ -419,21 +420,19 @@ app.get('/fish/:id', (req, res) => {
     `);
   }
 
-  const et = getEorzeanTime(new Date());
-
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Fish ${fish._id} - Eorzea Tracker</title>
+      <title>${fish.name || `Fish ${fish._id}`} - Eorzea Tracker</title>
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
       <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/fish" class="back-link">← Back to Fish</a>
-        <h1>🎣 Fish ${fish._id}</h1>
+        <h1>🎣 ${fish.name || `Fish ${fish._id}`}</h1>
         
         <div class="card">
           <div>
@@ -477,7 +476,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🌤️ Weather</span>
-            <span class="value">${fish.weatherSet.map((w) => `Weather ${w}`).join(', ')}</span>
+            <span class="value">${fish.weatherSet.map((w) => fishTracker.getWeatherName(w) || `Weather ${w}`).join(', ')}</span>
           </div>
           `
               : ''
@@ -487,7 +486,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🌥️ Previous Weather</span>
-            <span class="value">${fish.previousWeatherSet.map((w) => `Weather ${w}`).join(', ')}</span>
+            <span class="value">${fish.previousWeatherSet.map((w) => fishTracker.getWeatherName(w) || `Weather ${w}`).join(', ')}</span>
           </div>
           `
               : ''
@@ -497,7 +496,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🎣 Bait Chain</span>
-            <span class="value">${fish.bestCatchPath.map((b) => `Bait ${b}`).join(' → ')}</span>
+            <span class="value">${fish.bestCatchPath.map((b) => fishTracker.getItemName(b) || `Bait ${b}`).join(' → ')}</span>
           </div>
           `
               : ''
@@ -540,15 +539,42 @@ app.get('/fish/:id', (req, res) => {
             <span class="label">Size</span>
             <span class="value">${fish.aquarium.size}</span>
           </div>
-        </div>
-        `
+         </div>
+         `
             : ''
         }
-      </div>
-      <script src="/clock.js"></script>
-    </body>
-    </html>
-  `);
+
+         ${
+           quests.length > 0
+             ? `
+         <div class="card">
+           <h2>📜 Used in Quests</h2>
+           <p style="color: #aaa; margin-bottom: 12px;">
+             This fish is required for ${quests.length} quest${quests.length > 1 ? 's' : ''}
+           </p>
+           ${quests
+             .map(
+               (q) => `
+             <div style="padding: 8px 0; border-bottom: 1px solid #0f3460;">
+               <a href="/quest/${q.id}" style="font-weight: bold; color: #4ecca3;">
+                 ${q.name}
+               </a>
+               <div style="font-size: 0.9em; color: #aaa; margin-top: 4px;">
+                 Level ${q.level}${q.isRepeatable ? ' • Repeatable' : ''}
+               </div>
+             </div>
+           `
+             )
+             .join('')}
+         </div>
+         `
+             : ''
+         }
+       </div>
+       <script src="/clock.js"></script>
+     </body>
+     </html>
+   `);
 });
 
 // Quest List

@@ -139,6 +139,35 @@ export class QuestTrackerService {
   }
 
   /**
+   * Find quests that require a specific fish
+   */
+  getQuestsRequiringFish(fishId: number): Quest[] {
+    const allQuests = this.db
+      .prepare('SELECT * FROM quests WHERE objectives IS NOT NULL')
+      .all() as any[];
+
+    const questsWithFish: Quest[] = [];
+
+    for (const row of allQuests) {
+      try {
+        const objectives = JSON.parse(row.objectives || '[]');
+        const hasFish = objectives.some(
+          (obj: any) => obj.type === 'fish' && obj.targetId === fishId
+        );
+
+        if (hasFish) {
+          questsWithFish.push(this.mapRowToQuest(row));
+        }
+      } catch (error) {
+        // Skip quests with invalid JSON
+        continue;
+      }
+    }
+
+    return questsWithFish;
+  }
+
+  /**
    * Close database connection
    */
   close(): void {
