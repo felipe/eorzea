@@ -132,7 +132,6 @@ app.get('/style.css', (_req, res) => {
 
 // Home Page
 app.get('/', (_req, res) => {
-  const et = getEorzeanTime(new Date());
   const totalFish = fishTracker.getTotalCount();
   const bigFish = fishTracker.getBigFishCount();
   const totalQuests = questTracker.getTotalCount();
@@ -148,7 +147,7 @@ app.get('/', (_req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <h1>🎮 Eorzea Tracker</h1>
         
@@ -223,7 +222,6 @@ app.get('/fish', (req, res) => {
     limit: 100,
   });
 
-  const et = getEorzeanTime(new Date());
 
   res.send(`
     <!DOCTYPE html>
@@ -234,7 +232,7 @@ app.get('/fish', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>🎣 Fish ${bigOnly ? '(Big Fish)' : folkloreOnly ? '(Folklore)' : ''}</h1>
@@ -259,7 +257,7 @@ app.get('/fish', (req, res) => {
             (f) => `
           <div class="card">
             <a href="/fish/${f._id}" style="font-size: 1.1em; font-weight: bold;">
-              Fish ID ${f._id}
+              ${f.name || `Fish ID ${f._id}`}
             </a>
             <div style="margin-top: 8px;">
               ${f.bigFish ? '<span class="badge big-fish">⭐ BIG FISH</span>' : ''}
@@ -286,7 +284,6 @@ app.get('/fish', (req, res) => {
 app.get('/fish/available', (_req, res) => {
   const now = new Date();
   const fish = fishTracker.getAvailableFish(now);
-  const et = getEorzeanTime(now);
 
   res.send(`
     <!DOCTYPE html>
@@ -298,7 +295,7 @@ app.get('/fish/available', (_req, res) => {
       <meta http-equiv="refresh" content="60">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>🕐 Available Now</h1>
@@ -325,7 +322,7 @@ app.get('/fish/available', (_req, res) => {
             (f) => `
           <div class="card">
             <a href="/fish/${f._id}" style="font-size: 1.1em; font-weight: bold;">
-              Fish ID ${f._id}
+              ${f.name || `Fish ID ${f._id}`}
             </a>
             <div style="margin-top: 8px;">
               ${f.bigFish ? '<span class="badge big-fish">⭐ BIG FISH</span>' : ''}
@@ -373,21 +370,20 @@ app.get('/fish/:id', (req, res) => {
     `);
   }
 
-  const et = getEorzeanTime(new Date());
 
   res.send(`
     <!DOCTYPE html>
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Fish ${fish._id} - Eorzea Tracker</title>
+      <title>${fish.name || `Fish ${fish._id}`} - Eorzea Tracker</title>
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/fish" class="back-link">← Back to Fish</a>
-        <h1>🎣 Fish ${fish._id}</h1>
+        <h1>🎣 ${fish.name || `Fish ${fish._id}`}</h1>
         
         <div class="card">
           <div>
@@ -431,7 +427,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🌤️ Weather</span>
-            <span class="value">${fish.weatherSet.map((w) => `Weather ${w}`).join(', ')}</span>
+            <span class="value">${fish.weatherSet.map((w) => fishTracker.getWeatherName(w) || `Weather ${w}`).join(', ')}</span>
           </div>
           `
               : ''
@@ -441,7 +437,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🌥️ Previous Weather</span>
-            <span class="value">${fish.previousWeatherSet.map((w) => `Weather ${w}`).join(', ')}</span>
+            <span class="value">${fish.previousWeatherSet.map((w) => fishTracker.getWeatherName(w) || `Weather ${w}`).join(', ')}</span>
           </div>
           `
               : ''
@@ -451,7 +447,7 @@ app.get('/fish/:id', (req, res) => {
               ? `
           <div class="info-row">
             <span class="label">🎣 Bait Chain</span>
-            <span class="value">${fish.bestCatchPath.map((b) => `Bait ${b}`).join(' → ')}</span>
+            <span class="value">${fish.bestCatchPath.map((b) => fishTracker.getItemName(b) || `Bait ${b}`).join(' → ')}</span>
           </div>
           `
               : ''
@@ -518,7 +514,6 @@ app.get('/quests', (req, res) => {
     quests = questTracker.searchQuests({ limit: 100 });
   }
 
-  const et = getEorzeanTime(new Date());
 
   res.send(`
     <!DOCTYPE html>
@@ -529,7 +524,7 @@ app.get('/quests', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/" class="back-link">← Home</a>
         <h1>📜 Quests ${search ? `"${search}"` : level ? `(Level ${level})` : ''}</h1>
@@ -608,7 +603,6 @@ app.get('/quest/:id', (req, res) => {
     `);
   }
 
-  const et = getEorzeanTime(new Date());
 
   res.send(`
     <!DOCTYPE html>
@@ -619,7 +613,7 @@ app.get('/quest/:id', (req, res) => {
       <link rel="stylesheet" href="/style.css">
     </head>
     <body>
-      <div class="time-widget">⏰ ET ${String(et.hours).padStart(2, '0')}:${String(et.minutes).padStart(2, '0')}</div>
+      <div class="time-widget">⏰ ET 00:00:00</div>
       <div class="container">
         <a href="/quests" class="back-link">← Back to Quests</a>
         <h1>📜 ${quest.name}</h1>

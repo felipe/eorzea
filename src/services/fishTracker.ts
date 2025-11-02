@@ -23,7 +23,22 @@ export class FishTrackerService {
    * Get fish by ID
    */
   getFishById(id: number): Fish | null {
-    const row = this.db.prepare('SELECT * FROM fish WHERE id = ?').get(id) as any;
+    const row = this.db
+      .prepare(
+        `
+        SELECT 
+          f.id, f.patch, f.location_id, f.start_hour, f.end_hour,
+          f.weather_set, f.previous_weather_set, f.best_catch_path,
+          f.predators, f.intuition_length, f.folklore, f.collectable,
+          f.fish_eyes, f.big_fish, f.snagging, f.lure, f.hookset,
+          f.tug, f.gig, f.aquarium_water, f.aquarium_size, f.data_missing,
+          i.name
+        FROM fish f 
+        LEFT JOIN items i ON f.id = i.id 
+        WHERE f.id = ?
+      `
+      )
+      .get(id) as any;
 
     return row ? this.mapRowToFish(row) : null;
   }
@@ -32,7 +47,18 @@ export class FishTrackerService {
    * Search fish with optional filters
    */
   searchFish(options: FishSearchOptions = {}): Fish[] {
-    let query = 'SELECT * FROM fish WHERE 1=1';
+    let query = `
+      SELECT 
+        f.id, f.patch, f.location_id, f.start_hour, f.end_hour,
+        f.weather_set, f.previous_weather_set, f.best_catch_path,
+        f.predators, f.intuition_length, f.folklore, f.collectable,
+        f.fish_eyes, f.big_fish, f.snagging, f.lure, f.hookset,
+        f.tug, f.gig, f.aquarium_water, f.aquarium_size, f.data_missing,
+        i.name
+      FROM fish f 
+      LEFT JOIN items i ON f.id = i.id 
+      WHERE 1=1
+    `;
     const params: any[] = [];
 
     if (options.bigFishOnly) {
@@ -49,9 +75,8 @@ export class FishTrackerService {
       params.push(options.location);
     }
 
-    if (options.requiresFolklore !== undefined) {
-      query += ' AND folklore = ?';
-      params.push(options.requiresFolklore ? 1 : 0);
+    if (options.requiresFolklore === true) {
+      query += ' AND folklore = 1';
     }
 
     if (options.aquariumOnly) {
@@ -59,7 +84,7 @@ export class FishTrackerService {
     }
 
     // Add ordering
-    query += ' ORDER BY patch DESC, id ASC';
+    query += ' ORDER BY f.patch DESC, f.id ASC';
 
     // Add pagination
     if (options.limit) {
@@ -131,11 +156,30 @@ export class FishTrackerService {
   }
 
   /**
+   * Get item name by ID
+   */
+  getItemName(itemId: number): string | null {
+    const row = this.db.prepare('SELECT name FROM items WHERE id = ?').get(itemId) as any;
+    return row ? row.name : null;
+  }
+
+  /**
+   * Get weather name by ID
+   */
+  getWeatherName(weatherId: number): string | null {
+    const row = this.db
+      .prepare('SELECT name FROM weather_types WHERE id = ?')
+      .get(weatherId) as any;
+    return row ? row.name : null;
+  }
+
+  /**
    * Map database row to Fish object
    */
   private mapRowToFish(row: any): Fish {
     return {
       _id: row.id,
+      name: row.name || undefined,
       previousWeatherSet: JSON.parse(row.previous_weather_set || '[]'),
       weatherSet: JSON.parse(row.weather_set || '[]'),
       startHour: row.start_hour,
