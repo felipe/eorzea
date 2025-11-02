@@ -24,7 +24,7 @@ const CSV_DIR = join(DATA_DIR, 'game-csv');
 const DB_FILE = join(DATA_DIR, 'fish.db');
 const ITEM_CSV = join(CSV_DIR, 'Item.csv');
 
-async function main() {
+function main() {
   console.log('📦 Seeding item names into fish database...\n');
 
   // Open database

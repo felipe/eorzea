@@ -21,7 +21,7 @@ const DATA_DIR = join(__dirname, '..', 'data');
 const DB_FILE = join(DATA_DIR, 'fish.db');
 const FISH_DATA_FILE = join(DATA_DIR, 'fish-data.json');
 
-async function main() {
+function main() {
   console.log('🌤️  Seeding weather names into fish database...\n');
 
   // Open database
