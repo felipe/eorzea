@@ -8,6 +8,11 @@ import Database from 'better-sqlite3';
 import { join } from 'path';
 import type { Fish, FishSearchOptions } from '../types/fish.js';
 import { getEorzeanTime, isInTimeWindow } from '../utils/eorzeanTime.js';
+import {
+  calculateWeather,
+  findNextWeatherWindow,
+  type WeatherRate,
+} from '../utils/weatherForecast.js';
 
 // Default database path (relative to project root)
 const DB_PATH = join(process.cwd(), 'data', 'fish.db');
@@ -156,20 +161,163 @@ export class FishTrackerService {
   }
 
   /**
-   * Get item name by ID
-   */
-  getItemName(itemId: number): string | null {
-    const row = this.db.prepare('SELECT name FROM items WHERE id = ?').get(itemId) as any;
-    return row ? row.name : null;
-  }
-
-  /**
    * Get weather name by ID
    */
   getWeatherName(weatherId: number): string | null {
     const row = this.db
       .prepare('SELECT name FROM weather_types WHERE id = ?')
       .get(weatherId) as any;
+    return row ? row.name : null;
+  }
+
+  /**
+   * Get weather rates for a fishing spot
+   */
+  getWeatherRatesForSpot(locationId: number): WeatherRate[] | null {
+    // First get the fishing spot to find the zone/placename
+    const spot = this.db.prepare('SELECT * FROM fishing_spots WHERE id = ?').get(locationId) as any;
+    if (!spot) return null;
+
+    // Weather rates use zone_id which corresponds to fishing spot's zone_id
+    // If that's not set, try using the location_id itself as zone_id
+    const zoneId = spot.zone_id || locationId;
+
+    const weatherRateRow = this.db
+      .prepare('SELECT rates FROM weather_rates WHERE zone_id = ?')
+      .get(zoneId) as any;
+
+    if (!weatherRateRow) return null;
+
+    try {
+      const rates = JSON.parse(weatherRateRow.rates);
+      return rates.map(([weatherId, rate]: [number, number]) => ({
+        weatherId,
+        rate,
+      }));
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get current weather for a fish's location
+   */
+  getCurrentWeather(fish: Fish): number | null {
+    if (!fish.location) return null;
+
+    const weatherRates = this.getWeatherRatesForSpot(fish.location);
+    if (!weatherRates) return null;
+
+    return calculateWeather(new Date(), weatherRates);
+  }
+
+  /**
+   * Find next available window for a fish considering time and weather
+   */
+  getNextAvailableWindow(fish: Fish, from: Date = new Date()): Date | null {
+    // Get weather rates for this location
+    const weatherRates = fish.location ? this.getWeatherRatesForSpot(fish.location) : null;
+
+    // If no weather requirements or no weather rates available, just use time
+    if (!weatherRates || (fish.weatherSet.length === 0 && fish.previousWeatherSet.length === 0)) {
+      // Fallback to time-only calculation
+      const et = getEorzeanTime(from);
+      if (isInTimeWindow(et.hours, fish.startHour, fish.endHour)) {
+        return from; // Available now
+      }
+
+      // Calculate next time window (simplified - doesn't account for weather)
+      const hoursUntilStart =
+        fish.startHour > et.hours ? fish.startHour - et.hours : 24 - et.hours + fish.startHour;
+
+      const millisUntilStart = hoursUntilStart * 175 * 1000;
+      return new Date(from.getTime() + millisUntilStart);
+    }
+
+    // Find next weather window matching conditions
+    const nextWeatherWindow = findNextWeatherWindow(
+      from,
+      weatherRates,
+      fish.weatherSet,
+      fish.previousWeatherSet.length > 0 ? fish.previousWeatherSet : undefined
+    );
+
+    if (!nextWeatherWindow) return null;
+
+    // Now find when within this weather window the time is right
+    // Weather windows are 8 ET hours (23min 20sec real time)
+    const windowStart = nextWeatherWindow.startTime;
+    const windowEnd = nextWeatherWindow.endTime;
+
+    // Get the ET hour when this weather period starts
+    const weatherStartET = getEorzeanTime(windowStart);
+
+    // Calculate if the fish's time window overlaps with this weather period
+    // This follows Carbuncle Plushy's logic in availableRangeDuring()
+    const fishStartHour = fish.startHour;
+    const fishEndHour = fish.endHour;
+
+    if (fishEndHour < fishStartHour) {
+      // Fish time wraps around midnight (e.g., 20:00-4:00)
+      if (weatherStartET.hours < fishEndHour) {
+        // Weather starts before fish window ends (e.g., weather at 0:00, fish ends at 4:00)
+        // The fish window actually started YESTERDAY and may have already ended
+        // We need to check if we're still within that window
+        const fishWindowStart = new Date(
+          windowStart.getTime() - (24 - fishStartHour + weatherStartET.hours) * 175 * 1000
+        );
+        const fishWindowEnd = new Date(
+          fishWindowStart.getTime() + (24 - fishStartHour + fishEndHour) * 175 * 1000
+        );
+
+        // Check if the current time falls within this window
+        if (from >= fishWindowStart && from < fishWindowEnd) {
+          return from; // Available right now
+        }
+        // If we've passed the end, this weather period doesn't work
+        if (from >= fishWindowEnd) {
+          return this.getNextAvailableWindow(fish, windowEnd);
+        }
+        // Otherwise, return when the window starts
+        return fishWindowStart > from ? fishWindowStart : from;
+      } else {
+        // Weather starts after fish window ended (e.g., weather at 8:00, fish ended at 4:00)
+        // The fish window starts LATER in this weather period
+        const fishWindowStart = new Date(
+          windowStart.getTime() + (fishStartHour - weatherStartET.hours) * 175 * 1000
+        );
+
+        // Check if this fish window start is still within the weather period
+        if (fishWindowStart < windowEnd) {
+          return fishWindowStart > from ? fishWindowStart : from;
+        }
+        // Fish window starts after weather ends, try next weather period
+        return this.getNextAvailableWindow(fish, windowEnd);
+      }
+    } else {
+      // Fish time doesn't wrap (e.g., 8:00-16:00)
+      if (weatherStartET.hours < fishEndHour) {
+        // Weather period might overlap with fish window
+        const fishWindowStart =
+          weatherStartET.hours < fishStartHour
+            ? new Date(windowStart.getTime() + (fishStartHour - weatherStartET.hours) * 175 * 1000)
+            : windowStart;
+
+        // Check if this is still within the weather period
+        if (fishWindowStart < windowEnd) {
+          return fishWindowStart > from ? fishWindowStart : from;
+        }
+      }
+      // No overlap, try next weather period
+      return this.getNextAvailableWindow(fish, windowEnd);
+    }
+  }
+
+  /**
+   * Get item name by ID
+   */
+  getItemName(itemId: number): string | null {
+    const row = this.db.prepare('SELECT name FROM items WHERE id = ?').get(itemId) as any;
     return row ? row.name : null;
   }
 
