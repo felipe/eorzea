@@ -401,12 +401,30 @@ app.get('/fish/:id', (req, res) => {
   const fish = fishTracker.getFishById(fishId);
   const quests = questTracker.getQuestsRequiringFish(fishId);
 
-  // Calculate availability
+  // Calculate availability (considering time AND weather)
   const now = new Date();
   const et = getEorzeanTime(now);
-  const isAvailable = isInTimeWindow(et.hours, fish?.startHour || 0, fish?.endHour || 0);
-  const nextStart = fish ? getNextWindowStart(fish.startHour, fish.endHour, now) : null;
-  const currentEnd = fish ? getCurrentWindowEnd(fish.startHour, fish.endHour, now) : null;
+
+  // Check if time window matches
+  const timeMatches = isInTimeWindow(et.hours, fish?.startHour || 0, fish?.endHour || 0);
+
+  // Check if weather matches (if fish has weather requirements)
+  let weatherMatches = true;
+  let currentWeather: number | null = null;
+  if (fish && (fish.weatherSet.length > 0 || fish.previousWeatherSet.length > 0)) {
+    currentWeather = fishTracker.getCurrentWeather(fish);
+    if (fish.weatherSet.length > 0 && currentWeather !== null) {
+      weatherMatches = fish.weatherSet.includes(currentWeather);
+    }
+    // Note: Previous weather checking is handled by getNextAvailableWindow()
+  }
+
+  const isAvailable = timeMatches && weatherMatches;
+
+  // Get next available time (considering weather)
+  const nextStart = fish ? fishTracker.getNextAvailableWindow(fish, now) : null;
+  const currentEnd =
+    fish && isAvailable ? getCurrentWindowEnd(fish.startHour, fish.endHour, now) : null;
 
   if (!fish) {
     return res.status(404).send(`
@@ -464,6 +482,11 @@ app.get('/fish/:id', (req, res) => {
           </h2>
           <div style="margin-top: 12px; font-size: 0.95em;">
             <div style="color: #aaa; margin-bottom: 4px;">Time Window: ${fish.startHour}:00 - ${fish.endHour}:00 ET</div>
+            ${
+              currentWeather !== null
+                ? `<div style="color: #aaa; margin-bottom: 4px;">Current Weather: ${fishTracker.getWeatherName(currentWeather)}</div>`
+                : ''
+            }
             ${
               isAvailable && currentEnd
                 ? `<div style="color: #4ecca3; font-weight: 500;">Window closes at ${currentEnd.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} (real time)</div>`
