@@ -4,26 +4,20 @@ A terminal-first quest tracking tool for casual FFXIV players. Now with mobile w
 
 ## Features
 
-- **Character Location Tracking**: Check where your character is in the game
-- **Quest Discovery**: View available quests based on your location and level
+- **Quest Tracking**: Search quests by name or level with detailed objectives
 - **Fish Tracking**: Track fish availability, time windows, and catch requirements
-- **Quest Objectives**: Detailed objective display with fish catch requirements
+- **Quest Objectives**: View fish, NPC, item, and enemy objectives with full details
+- **Character Lookup**: Check character information via Lodestone
 - **Eorzean Time**: Real-time Eorzean time calculation for time-sensitive fishing
 - **Mobile Web View**: 📱 Access your data on your phone with a simple web interface
-- **CLI-First Design**: Built for the command line with web expansion
+- **100% Offline**: All quest and fish data stored locally in SQLite
 
 ## Installation
 
 ```bash
-yarn install
-```
-
-## Installation
-
-### Local Development
-
-```bash
-# Install dependencies
+# Clone and install
+git clone https://github.com/felipe/eorzea.git
+cd eorzea
 yarn install
 
 # Link the CLI globally (makes 'eorzea' command available)
@@ -32,46 +26,6 @@ npm link
 # Now you can use 'eorzea' from anywhere!
 eorzea --help
 ```
-
-### From Source
-
-```bash
-# Clone and install
-git clone https://github.com/felipe/eorzea.git
-cd eorzea
-yarn install
-npm link
-```
-
-## Development
-
-```bash
-# Run in development mode
-yarn dev <command>
-
-# Run tests
-yarn test
-
-# Lint code
-yarn lint
-
-# Format code
-yarn format
-
-# Update fish data
-yarn update-fish-data
-```
-
-## Configuration
-
-Create a `.env` file in the project root (see `.env.example`):
-
-```env
-DEFAULT_CHARACTER_NAME=Your Character Name
-DEFAULT_SERVER=YourServer
-```
-
-_Note: XIVAPI V2 no longer requires API keys for basic functionality._
 
 ## Usage
 
@@ -83,12 +37,12 @@ eorzea --help
 
 # Character commands
 eorzea character --name "Character Name" --server "Server"
-eorzea character --id 12345678  # Direct lookup by character ID
+eorzea character --id 12345678
 
 # Quest commands
 eorzea quest --search "quest name"
 eorzea quest --level 50
-eorzea quest --id 12345  # Get specific quest details with objectives
+eorzea quest --id 12345
 
 # Fish commands
 eorzea fish --available          # Show currently catchable fish
@@ -120,34 +74,48 @@ yarn web
 
 See [`docs/WEB_VIEW.md`](docs/WEB_VIEW.md) for detailed web view documentation.
 
-## Current Status
+## Configuration
 
-### Implemented Features ✓
+Create a `.env` file in the project root (see `.env.example`):
 
-- ✅ **100% Offline Quest Tracking**: Parse quest data directly from FFXIV CSV files
-- ✅ **Quest Objectives System**: Display detailed objectives (fish, NPCs, items, enemies)
-- ✅ **Fish Objective Details**: Complete catch info (location, time, weather, bait chains)
-- ✅ **Mobile Web View**: Simple web interface for phone access
-- ✅ **Custom Lodestone Scraper**: Character search and profile lookup via direct scraping
-- ✅ **Fish Tracking System**: Complete fish database with 1,088 fish entries
-- ✅ **Eorzean Time Calculations**: Real-time time window tracking for fishing
-- ✅ **SQLite Database**: Fast local queries for fish, spots, baits, weather, and quests
-- ✅ **Configuration Management**: Environment variables and local config file support
-- ✅ **Character Commands**: Search by name/server, lookup by ID with full profile data
-- ✅ **Quest Commands**: Search by name, filter by level, view objectives with full details
-- ✅ **Fish Commands**: Available fish, big fish, patch filtering, detailed lookups
-- ✅ **Rate Limiting**: Respectful API usage with 1s delays for Lodestone
-- ✅ **Error Handling**: User-friendly error messages and graceful failure handling
-- ✅ **Comprehensive Tests**: 93 passing tests with 82% coverage on services
+```env
+DEFAULT_CHARACTER_NAME=Your Character Name
+DEFAULT_SERVER=YourServer
+```
 
-### Migration to V2 APIs ✅
+## Development
 
-- **Migrated from XIVAPI V1 → V2**: Updated to use the new `/api/sheet/` endpoints
-- **Added Custom Lodestone Scraper**: Replaced deprecated V1 character endpoints
-- **No More API Keys Required**: XIVAPI V2 works without authentication for basic usage
-- **Improved Data Structure**: Better field organization and more reliable quest data
+```bash
+# Run in development mode
+yarn dev <command>
 
-### Fish Tracking ✅
+# Run tests
+yarn test
+
+# Lint code
+yarn lint
+
+# Format code
+yarn format
+
+# Update fish data
+yarn update-fish-data
+
+# Update quest data
+yarn update-quest-data
+```
+
+## What's Inside
+
+### Quest System
+
+- 5,277 quests from FFXIV CSV files
+- 4,514 quests with parsed objectives
+- Fish, NPC, item, and enemy objectives
+- Quest prerequisites and rewards
+- Search by name, level, or ID
+
+### Fish Tracking
 
 Powered by data from [Carbuncle Plushy Fish Tracker](https://github.com/icykoneko/ff14-fish-tracker-app):
 
@@ -158,27 +126,11 @@ Powered by data from [Carbuncle Plushy Fish Tracker](https://github.com/icykonek
 - Aquarium compatibility data
 - Real-time availability based on Eorzean time
 
-See `docs/fish-data-update.md` for update instructions.
+### Character Lookup
 
-### In Progress
-
-- 🔨 Location-based quest filtering
-- 🔨 Quest walkthrough display
-- 🔨 Weather forecasting for fishing
-
-## TODO
-
-- [ ] **Augment Quest Data with Garland Tools**: Integrate [Garland Tools API](https://github.com/karashiiro/garlandtools-api) for enhanced quest information
-  - Add quest objectives and walkthroughs (not available in XIVAPI)
-  - Include dialogue, cutscene markers, and journal entries
-  - Show detailed rewards including optional choices
-  - Display NPC locations and involved characters
-  - Access to quest prerequisites and follow-up quests
-  - Note: Garland Tools provides comprehensive quest data including descriptions, objectives, and narrative content that XIVAPI v2 lacks
-
-## Roadmap
-
-See `agent-os/product/roadmap.md` for the full development roadmap.
+- Search characters by name and server
+- View character profiles via Lodestone scraper
+- Check character level, jobs, and stats
 
 ## Tech Stack
 
@@ -187,8 +139,7 @@ See `agent-os/product/roadmap.md` for the full development roadmap.
 - **Web Server**: Express.js (for mobile web view)
 - **Database**: SQLite with better-sqlite3
 - **Data Sources**: FFXIV CSV Files + Custom Lodestone Scraper + Carbuncle Plushy Fish Tracker
-- **Testing**: Jest with ts-jest
-- **Web Scraping**: Cheerio for HTML parsing
+- **Testing**: Jest with ts-jest (93 passing tests)
 
 ## Acknowledgments
 
