@@ -1,33 +1,46 @@
 # Product Roadmap
 
-1. [ ] XIVAPI Integration - Implement core integration with XIVAPI to fetch quest data, including quest details, prerequisites, and rewards. Set up error handling and rate limiting for API calls. `M`
+## ✅ Completed
 
-2. [ ] Character Data Fetching - Build Lodestone scraping or XIVAPI character lookup to retrieve character information including current level, job, and last known location. Support character lookup by name and server. `M`
+1. [x] **Offline Quest Data System** - Parse quest data directly from FFXIV CSV files. Includes quest details, objectives, prerequisites, and rewards. 4,514 quests with parsed objectives.
 
-3. [ ] CLI Framework & Commands - Create CLI interface with commands for character lookup (`character <name>`), quest search (`quests <location/level>`), and quest details (`quest <id>`). Include help documentation and command validation. `S`
+2. [x] **Character Data Fetching** - Lodestone scraper to retrieve character information including level, job, and stats. Support character lookup by name/server and by ID.
 
-4. [ ] Quest Walkthrough Display - Implement detailed quest walkthrough view showing objectives, NPC locations, rewards, and step-by-step completion guide. Format output for terminal readability with colors and structure. `S`
+3. [x] **CLI Framework & Commands** - CLI interface with commands for character lookup, quest search, fish tracking, and quest details. Help documentation and command validation included.
 
-5. [ ] Quest Filtering & Search - Build advanced filtering for quests by location, level range, quest type (MSQ, job, side), and completion status. Support fuzzy search by quest name. `M`
+4. [x] **Fish Tracking System** - Complete fish database with 1,088 fish entries including time windows, weather requirements, bait paths, and catch methods. Real-time availability based on Eorzean time.
 
-6. [ ] Local Data Caching - Implement SQLite database for caching quest data, character information, and API responses. Add cache invalidation strategy and configurable TTL for different data types. `M`
+5. [x] **Quest Objectives Display** - Parse and display fish, NPC, item, and enemy objectives with full details including fish catch requirements, bait chains, and weather.
 
-7. [ ] Quest Progress Tracking - Add local database tracking for quest status (not started, in progress, completed) with commands to mark quest progress and view personal quest history. `S`
+6. [x] **Local Data Storage** - SQLite database for quest data, fish data, and quest objectives. Fast local queries with better-sqlite3.
 
-8. [ ] Smart Quest Recommendations - Build recommendation engine that suggests optimal quest routes based on character location, level, travel efficiency, and quest rewards. Include explanation of recommendations. `L`
+7. [x] **Mobile Web View** - Express.js web server with mobile-responsive interface. Browse fish and quests, view objectives, check availability. Dark theme optimized for phones.
 
-9. [ ] Quest Data Export - Implement export functionality to share quest lists and walkthroughs as JSON, Markdown, or plain text files. Support exporting personal progress reports. `XS`
+## 🔄 In Progress
 
-10. [ ] RESTful API Development - Create API layer exposing character lookup, quest search, walkthrough retrieval, and recommendation endpoints. Include API authentication and rate limiting. `L`
+See GitHub Issues for current work items.
 
-11. [ ] API Documentation - Generate OpenAPI/Swagger documentation for all API endpoints with example requests/responses and usage guides for third-party integration. `S`
+## 📋 Future Considerations
 
-12. [ ] Multi-Character Management - Add support for managing multiple characters in CLI and API, with commands to switch active character and compare quest completion across characters. `M`
+- [ ] **Quest Filtering & Search** - Advanced filtering by location, quest type (MSQ, job, side), and completion status. Enhanced fuzzy search.
+
+- [ ] **Quest Progress Tracking** - Local database tracking for quest status (not started, in progress, completed) with personal quest history.
+
+- [ ] **Gathering Window Tracking** - Show next availability windows for gathering operations (fish, mining, botany) with real-time countdowns.
+
+- [ ] **Weather Forecasting** - Predict upcoming weather patterns for fishing and gathering.
+
+- [ ] **Location Hierarchy** - Display zone/region information and nearest Aetheryte for all locations.
+
+- [ ] **Smart Quest Recommendations** - Suggest optimal quest routes based on character location, level, and efficiency.
+
+- [ ] **Multi-Character Management** - Support for managing multiple characters with commands to switch active character and compare progress.
+
+- [ ] **RESTful API Development** - Create API layer exposing character lookup, quest search, and fish tracking endpoints. iOS app could consume this API.
 
 > Notes
-> - Order prioritizes building core data retrieval (items 1-2) before user-facing features
-> - CLI commands (items 3-9) establish MVP functionality for immediate user value
-> - API development (items 10-11) enables future frontend and third-party integrations
-> - Advanced features (items 8, 12) build on core functionality after MVP is stable
-> - Frontend development intentionally excluded from this roadmap pending API completion
-> - All features should work with real XIVAPI/Lodestone data, no mock implementations
+>
+> - Focus is on offline-first functionality using CSV data
+> - No external API dependencies for core quest/fish tracking
+> - Web view serves as proof-of-concept for future mobile apps
+> - API layer would enable native iOS/Android apps

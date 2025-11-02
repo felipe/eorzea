@@ -191,7 +191,7 @@ The web view uses the exact same business logic as the CLI!
 - [ ] User favorites (localStorage)
 - [ ] Dark/Light theme toggle
 - [ ] PWA manifest for full app experience
-- [ ] Images from XIVAPI
+- [ ] Game asset images
 
 ## 📝 Development
 
