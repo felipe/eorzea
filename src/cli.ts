@@ -8,6 +8,10 @@ import { dirname, join } from 'path';
 import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
 import { fishCommand } from './commands/fish.js';
+import { progressCommand } from './commands/progress.js';
+import { titleCommand } from './commands/title.js';
+import { achievementCommand } from './commands/achievement.js';
+import { syncCommand } from './commands/sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,10 +26,16 @@ program.name('eorzea').description(description).version(version);
 program
   .command('character')
   .alias('char')
-  .description('Manage and view character information (requires internet)')
+  .description('Manage and view character information')
   .option('-n, --name <name>', 'Character name')
   .option('-s, --server <server>', 'Server name')
   .option('-i, --id <id>', 'Character ID (for direct lookup)')
+  .option('--add', 'Add character to profile (requires internet)')
+  .option('--list', 'List all characters in profile')
+  .option('--active', 'Show active character')
+  .option('--switch <name>', 'Switch active character')
+  .option('--remove <name>', 'Remove character from profile')
+  .option('--sync', 'Sync character data from Lodestone (requires internet)')
   .action(async (options) => {
     await characterCommand(options);
   });
@@ -37,6 +47,11 @@ program
   .option('-s, --search <query>', 'Search for quests by name')
   .option('-l, --level <level>', 'List quests for a specific level')
   .option('-i, --id <id>', 'Get details for a specific quest')
+  .option('--complete', 'Mark quest as complete (use with --id)')
+  .option('--incomplete', 'Mark quest as incomplete (use with --id)')
+  .option('--note <note>', 'Add a note when marking complete')
+  .option('--show-completed', 'Show only completed quests')
+  .option('--show-incomplete', 'Show only incomplete quests')
   .action(async (options) => {
     await questCommand(options);
   });
@@ -52,6 +67,10 @@ program
   .option('-a, --available', 'Show fish available at current Eorzean time')
   .option('--aquarium', 'Show aquarium fish only')
   .option('--limit <limit>', 'Limit number of results (default: 20)')
+  .option('--caught', 'Mark fish as caught (use with --id)')
+  .option('--note <note>', 'Add a note when marking caught')
+  .option('--show-caught', 'Show only caught fish')
+  .option('--show-uncaught', 'Show only uncaught fish')
   .action(async (options) => {
     await fishCommand(options);
   });
@@ -65,6 +84,37 @@ program
   .action((options) => {
     console.log(chalk.yellow('Location command coming soon!'));
     console.log('Options:', options);
+  });
+
+// Progress command
+program
+  .command('progress')
+  .description('View player progress and statistics')
+  .option('--quests', 'Show only quest progress')
+  .option('--fish', 'Show only fishing progress')
+  .option('--titles', 'Show only title progress')
+  .option('--achievements', 'Show only achievement progress')
+  .option('--jobs', 'Show only job progress')
+  .option('--recent', 'Show only recent activity')
+  .action(async (options) => {
+    await progressCommand(options);
+  });
+
+// Title command
+program.addCommand(titleCommand);
+
+// Achievement command
+program.addCommand(achievementCommand);
+
+// Sync command
+program
+  .command('sync')
+  .description('Intelligent sync: analyze achievements and infer quest completions')
+  .option('--achievements <ids>', 'Comma-separated achievement IDs to sync')
+  .option('--from-file <path>', 'Parse achievements from Lodestone text file')
+  .option('--dry-run', 'Preview changes without saving')
+  .action(async (options) => {
+    await syncCommand(options);
   });
 
 // Guide command for quest walkthroughs

@@ -1,47 +1,133 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { QuestTrackerService } from '../services/questTracker.js';
+import { getPlayerProfileService } from '../services/playerProfile.js';
 
 export interface QuestCommandOptions {
   list?: boolean;
   search?: string;
   level?: string;
   id?: string;
+  // Progress tracking
+  complete?: boolean;
+  incomplete?: boolean;
+  note?: string;
+  showCompleted?: boolean;
+  showIncomplete?: boolean;
 }
 
 export async function questCommand(options: QuestCommandOptions): Promise<void> {
   const questTracker = new QuestTrackerService();
+  const profileService = getPlayerProfileService();
 
   try {
     // Get quest by ID
     if (options.id) {
-      await fetchQuestById(questTracker, parseInt(options.id, 10));
+      const questId = parseInt(options.id, 10);
+
+      // Handle completion tracking
+      if (options.complete) {
+        await markQuestComplete(profileService, questTracker, questId, options.note);
+        return;
+      }
+
+      if (options.incomplete) {
+        await markQuestIncomplete(profileService, questTracker, questId);
+        return;
+      }
+
+      // Show quest details
+      await fetchQuestById(questTracker, profileService, questId);
       return;
     }
 
     // Search quests by query
     if (options.search) {
-      await searchQuests(questTracker, options.search);
+      await searchQuests(questTracker, profileService, options.search, options);
       return;
     }
 
     // List quests by level
     if (options.level) {
-      await listQuestsByLevel(questTracker, parseInt(options.level, 10));
+      await listQuestsByLevel(questTracker, profileService, parseInt(options.level, 10), options);
       return;
     }
 
     // Default: show usage
     console.log(chalk.yellow('Please specify an action:'));
-    console.log(chalk.cyan('  --search <query>') + '  Search for quests by name');
-    console.log(chalk.cyan('  --level <level>') + '   List quests for a specific level');
-    console.log(chalk.cyan('  --id <id>') + '         Get details for a specific quest');
+    console.log(chalk.cyan('  --search <query>') + '      Search for quests by name');
+    console.log(chalk.cyan('  --level <level>') + '       List quests for a specific level');
+    console.log(chalk.cyan('  --id <id>') + '             Get details for a specific quest');
+    console.log(chalk.cyan('  --id <id> --complete') + '  Mark quest as complete');
+    console.log(chalk.cyan('  --id <id> --incomplete') + 'Mark quest as incomplete');
+    console.log(chalk.cyan('  --show-completed') + '      Filter completed quests');
+    console.log(chalk.cyan('  --show-incomplete') + '     Filter incomplete quests');
   } finally {
     questTracker.close();
   }
 }
 
-async function searchQuests(questTracker: QuestTrackerService, query: string): Promise<void> {
+async function markQuestComplete(
+  profileService: any,
+  questTracker: QuestTrackerService,
+  questId: number,
+  note?: string
+): Promise<void> {
+  const character = profileService.getActiveCharacter();
+
+  if (!character) {
+    console.log(chalk.red('No active character.'));
+    console.log(chalk.yellow('Use "eorzea character --add" to add a character first.\n'));
+    return;
+  }
+
+  const quest = questTracker.getQuestById(questId);
+
+  if (!quest) {
+    console.log(chalk.red(`Quest ${questId} not found.\n`));
+    return;
+  }
+
+  profileService.markQuestComplete(character.id, questId, note);
+  console.log(chalk.green(`✓ Marked "${quest.name}" as complete!`));
+
+  if (note) {
+    console.log(chalk.gray(`  Note: ${note}`));
+  }
+
+  console.log('');
+}
+
+async function markQuestIncomplete(
+  profileService: any,
+  questTracker: QuestTrackerService,
+  questId: number
+): Promise<void> {
+  const character = profileService.getActiveCharacter();
+
+  if (!character) {
+    console.log(chalk.red('No active character.'));
+    console.log(chalk.yellow('Use "eorzea character --add" to add a character first.\n'));
+    return;
+  }
+
+  const quest = questTracker.getQuestById(questId);
+
+  if (!quest) {
+    console.log(chalk.red(`Quest ${questId} not found.\n`));
+    return;
+  }
+
+  profileService.markQuestIncomplete(character.id, questId);
+  console.log(chalk.yellow(`○ Marked "${quest.name}" as incomplete.\n`));
+}
+
+async function searchQuests(
+  questTracker: QuestTrackerService,
+  profileService: any,
+  query: string,
+  options: QuestCommandOptions
+): Promise<void> {
   console.log(chalk.cyan(`\n🔍 Searching for quests: "${query}"\n`));
 
   const results = questTracker.searchByName(query, 20);
@@ -51,14 +137,32 @@ async function searchQuests(questTracker: QuestTrackerService, query: string): P
     return;
   }
 
-  console.log(chalk.green(`Found ${results.length} quest(s)\n`));
+  // Filter by completion status if requested
+  let filteredResults = results;
+  const character = profileService.getActiveCharacter();
 
-  displayQuestTable(results);
+  if (character && (options.showCompleted || options.showIncomplete)) {
+    filteredResults = results.filter((quest) => {
+      const isComplete = profileService.isQuestComplete(character.id, quest.id);
+      if (options.showCompleted) return isComplete;
+      if (options.showIncomplete) return !isComplete;
+      return true;
+    });
+  }
+
+  console.log(chalk.green(`Found ${filteredResults.length} quest(s)\n`));
+
+  displayQuestTable(filteredResults, profileService);
 
   console.log(chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest'));
 }
 
-async function listQuestsByLevel(questTracker: QuestTrackerService, level: number): Promise<void> {
+async function listQuestsByLevel(
+  questTracker: QuestTrackerService,
+  profileService: any,
+  level: number,
+  options: QuestCommandOptions
+): Promise<void> {
   console.log(chalk.cyan(`\n📋 Finding quests for level ${level}\n`));
 
   // Get quests within ±2 levels for better results
@@ -69,16 +173,33 @@ async function listQuestsByLevel(questTracker: QuestTrackerService, level: numbe
     return;
   }
 
+  // Filter by completion status if requested
+  let filteredResults = results;
+  const character = profileService.getActiveCharacter();
+
+  if (character && (options.showCompleted || options.showIncomplete)) {
+    filteredResults = results.filter((quest) => {
+      const isComplete = profileService.isQuestComplete(character.id, quest.id);
+      if (options.showCompleted) return isComplete;
+      if (options.showIncomplete) return !isComplete;
+      return true;
+    });
+  }
+
   console.log(
-    chalk.green(`Found ${results.length} quest(s) for levels ${level - 2}-${level + 2}\n`)
+    chalk.green(`Found ${filteredResults.length} quest(s) for levels ${level - 2}-${level + 2}\n`)
   );
 
-  displayQuestTable(results);
+  displayQuestTable(filteredResults, profileService);
 
   console.log(chalk.cyan('\nTip: Use --id <ID> to view detailed information for a specific quest'));
 }
 
-async function fetchQuestById(questTracker: QuestTrackerService, questId: number): Promise<void> {
+async function fetchQuestById(
+  questTracker: QuestTrackerService,
+  profileService: any,
+  questId: number
+): Promise<void> {
   console.log(chalk.cyan(`\n🔍 Fetching quest details for ID: ${questId}\n`));
 
   const quest = questTracker.getQuestById(questId);
@@ -88,10 +209,73 @@ async function fetchQuestById(questTracker: QuestTrackerService, questId: number
     return;
   }
 
+  // Check completion status
+  const character = profileService.getActiveCharacter();
+  let isComplete = false;
+  let completionInfo = null;
+
+  if (character) {
+    isComplete = profileService.isQuestComplete(character.id, quest.id);
+    if (isComplete) {
+      const completed = profileService
+        .getCompletedQuests(character.id)
+        .find((q: any) => q.questId === quest.id);
+      completionInfo = completed;
+    }
+  }
+
   // Display quest information
   console.log(chalk.bold.cyan('=== Quest Information ===\n'));
   console.log(`${chalk.bold('Name:')} ${quest.name}`);
   console.log(`${chalk.bold('ID:')} ${quest.id}`);
+
+  // Show completion status
+  if (character) {
+    if (isComplete) {
+      console.log(`${chalk.bold('Status:')} ${chalk.green('✓ Complete')}`);
+      if (completionInfo?.completedAt) {
+        const date = new Date(completionInfo.completedAt);
+        console.log(
+          `${chalk.bold('Completed:')} ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
+        );
+      }
+
+      // Show source information for inferred quests
+      if (completionInfo?.source) {
+        let sourceLabel = 'Manual';
+        let sourceColor = chalk.white;
+
+        if (completionInfo.source === 'sync_inferred') {
+          sourceLabel = 'Inferred from Achievement';
+          sourceColor = chalk.yellow;
+        } else if (completionInfo.source === 'sync_confirmed') {
+          sourceLabel = 'Confirmed from Lodestone';
+          sourceColor = chalk.green;
+        }
+
+        console.log(`${chalk.bold('Source:')} ${sourceColor(sourceLabel)}`);
+
+        // Show confidence for inferred quests
+        if (completionInfo.confidence) {
+          const confidenceColor =
+            completionInfo.confidence >= 90
+              ? chalk.green
+              : completionInfo.confidence >= 70
+                ? chalk.yellow
+                : chalk.red;
+          console.log(
+            `${chalk.bold('Confidence:')} ${confidenceColor(completionInfo.confidence + '%')}`
+          );
+        }
+      }
+
+      if (completionInfo?.notes) {
+        console.log(`${chalk.bold('Note:')} ${chalk.gray(completionInfo.notes)}`);
+      }
+    } else {
+      console.log(`${chalk.bold('Status:')} ${chalk.gray('○ Not complete')}`);
+    }
+  }
 
   if (quest.internalId) {
     console.log(`${chalk.bold('Internal ID:')} ${quest.internalId}`);
@@ -190,25 +374,39 @@ async function fetchQuestById(questTracker: QuestTrackerService, questId: number
   console.log('');
 }
 
-function displayQuestTable(quests: any[]): void {
+function displayQuestTable(quests: any[], profileService?: any): void {
+  const character = profileService?.getActiveCharacter();
+
   const table = new Table({
-    head: ['ID', 'Name', 'Level', 'Type ID', 'Location ID'].map((h) => chalk.cyan(h)),
+    head: (character
+      ? ['✓', 'ID', 'Name', 'Level', 'Type ID', 'Location ID']
+      : ['ID', 'Name', 'Level', 'Type ID', 'Location ID']
+    ).map((h) => chalk.cyan(h)),
     style: {
       head: [],
       border: [],
     },
-    colWidths: [10, 50, 8, 10, 12],
+    colWidths: character ? [3, 10, 45, 8, 10, 12] : [10, 50, 8, 10, 12],
   });
 
   quests.forEach((quest: any) => {
     const displayLevel = quest.level + (quest.levelOffset || 0);
-    table.push([
+    const isComplete = character ? profileService.isQuestComplete(character.id, quest.id) : false;
+    const statusIcon = isComplete ? chalk.green('✓') : chalk.gray('○');
+
+    const row = [
       quest.id || 'N/A',
       quest.name || 'Unknown',
       displayLevel || 'N/A',
       quest.journalGenreId || 'N/A',
       quest.placeNameId || 'N/A',
-    ]);
+    ];
+
+    if (character) {
+      row.unshift(statusIcon);
+    }
+
+    table.push(row);
   });
 
   console.log(table.toString());
