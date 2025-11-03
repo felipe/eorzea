@@ -11,6 +11,7 @@ import { fishCommand } from './commands/fish.js';
 import { progressCommand } from './commands/progress.js';
 import { titleCommand } from './commands/title.js';
 import { achievementCommand } from './commands/achievement.js';
+import { syncCommand } from './commands/sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -104,6 +105,16 @@ program.addCommand(titleCommand);
 
 // Achievement command
 program.addCommand(achievementCommand);
+
+// Sync command
+program
+  .command('sync')
+  .description('Intelligent sync: analyze achievements and infer quest completions')
+  .option('--achievements <ids>', 'Comma-separated achievement IDs to sync')
+  .option('--dry-run', 'Preview changes without saving')
+  .action(async (options) => {
+    await syncCommand(options);
+  });
 
 // Guide command for quest walkthroughs
 program

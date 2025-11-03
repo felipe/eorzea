@@ -243,16 +243,78 @@ export class PlayerProfileService {
   /**
    * Mark a quest as complete for a character
    */
-  markQuestComplete(characterId: string, questId: number, notes?: string): void {
+  markQuestComplete(
+    characterId: string,
+    questId: number,
+    notes?: string,
+    source: string = 'manual',
+    confidence?: number,
+    inferredFrom?: number
+  ): void {
     const now = Date.now();
 
     this.db
       .prepare(
-        `INSERT INTO completed_quests (character_id, quest_id, completed_at, notes)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(character_id, quest_id) DO UPDATE SET completed_at = ?, notes = ?`
+        `INSERT INTO completed_quests (character_id, quest_id, completed_at, notes, source, confidence, inferred_from)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(character_id, quest_id) DO UPDATE SET completed_at = ?, notes = ?, source = ?, confidence = ?, inferred_from = ?`
       )
-      .run(characterId, questId, now, notes || null, now, notes || null);
+      .run(
+        characterId,
+        questId,
+        now,
+        notes || null,
+        source,
+        confidence || null,
+        inferredFrom || null,
+        now,
+        notes || null,
+        source,
+        confidence || null,
+        inferredFrom || null
+      );
+  }
+
+  /**
+   * Batch mark multiple quests as complete (for intelligent sync)
+   */
+  markQuestsCompleteBatch(
+    characterId: string,
+    quests: Array<{
+      questId: number;
+      notes?: string;
+      source: string;
+      confidence: number;
+      inferredFrom?: number;
+    }>
+  ): void {
+    const now = Date.now();
+    const stmt = this.db.prepare(
+      `INSERT INTO completed_quests (character_id, quest_id, completed_at, notes, source, confidence, inferred_from)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(character_id, quest_id) DO UPDATE SET completed_at = ?, notes = ?, source = ?, confidence = ?, inferred_from = ?`
+    );
+
+    const transaction = this.db.transaction((questList: typeof quests) => {
+      for (const quest of questList) {
+        stmt.run(
+          characterId,
+          quest.questId,
+          now,
+          quest.notes || null,
+          quest.source,
+          quest.confidence,
+          quest.inferredFrom || null,
+          now,
+          quest.notes || null,
+          quest.source,
+          quest.confidence,
+          quest.inferredFrom || null
+        );
+      }
+    });
+
+    transaction(quests);
   }
 
   /**
@@ -941,6 +1003,81 @@ export class PlayerProfileService {
     };
   }
 
+  // ==================== Intelligent Sync ====================
+
+  /**
+   * Perform intelligent sync: analyze achievements and infer quest completions
+   */
+  async performIntelligentSync(
+    characterId: string,
+    achievementIds: number[]
+  ): Promise<{
+    achievementsProcessed: number;
+    questsInferred: number;
+    highConfidence: number;
+    mediumConfidence: number;
+    lowConfidence: number;
+  }> {
+    // Import services dynamically to avoid circular dependencies
+    const { getIntelligentSyncService } = await import('./intelligentSync.js');
+    const intelligentSync = getIntelligentSyncService();
+
+    // Analyze achievements
+    const inferenceResult = intelligentSync.analyzeAchievements(achievementIds);
+
+    // Mark unlocked achievements
+    for (const achievement of inferenceResult.achievements) {
+      if (!this.isAchievementUnlocked(characterId, achievement.achievementId)) {
+        this.markAchievementUnlocked(
+          characterId,
+          achievement.achievementId,
+          'sync_confirmed',
+          'Detected from Lodestone sync'
+        );
+
+        // Check if this achievement rewards a title
+        const { getAchievementTrackerService } = await import('./achievementTracker.js');
+        const achievementTracker = getAchievementTrackerService();
+        const achievementData = achievementTracker.getAchievementById(achievement.achievementId);
+
+        if (achievementData?.titleRewardId) {
+          if (!this.isTitleUnlocked(characterId, achievementData.titleRewardId)) {
+            this.markTitleUnlocked(
+              characterId,
+              achievementData.titleRewardId,
+              'achievement',
+              achievement.achievementId,
+              `Auto-unlocked from achievement: ${achievementData.name}`
+            );
+          }
+        }
+      }
+    }
+
+    // Batch mark inferred quests
+    const questsToMark = inferenceResult.inferredQuests
+      .filter((q: any) => !this.isQuestComplete(characterId, q.questId))
+      .map((q: any) => ({
+        questId: q.questId,
+        notes: q.reason,
+        source: q.source,
+        confidence: q.confidence,
+        inferredFrom: q.inferredFrom,
+      }));
+
+    if (questsToMark.length > 0) {
+      this.markQuestsCompleteBatch(characterId, questsToMark);
+    }
+
+    return {
+      achievementsProcessed: inferenceResult.achievements.length,
+      questsInferred: questsToMark.length,
+      highConfidence: inferenceResult.summary.highConfidence,
+      mediumConfidence: inferenceResult.summary.mediumConfidence,
+      lowConfidence: inferenceResult.summary.lowConfidence,
+    };
+  }
+
   // ==================== Utility Methods ====================
 
   /**
@@ -987,6 +1124,9 @@ export class PlayerProfileService {
       questId: row.quest_id,
       completedAt: new Date(row.completed_at),
       notes: row.notes || undefined,
+      source: row.source || undefined,
+      confidence: row.confidence || undefined,
+      inferredFrom: row.inferred_from || undefined,
     };
   }
 

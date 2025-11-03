@@ -33,6 +33,9 @@ export interface CompletedQuest {
   questId: number;
   completedAt: Date;
   notes?: string;
+  source?: string; // 'manual' | 'sync_inferred' | 'sync_confirmed'
+  confidence?: number; // 0-100
+  inferredFrom?: number; // achievement_id
 }
 
 export interface CaughtFish {
@@ -115,6 +118,13 @@ export interface CharacterSyncResult {
       oldLevel: number;
       newLevel: number;
     }>;
+  };
+  intelligentSync?: {
+    achievementsFound: number;
+    questsInferred: number;
+    highConfidence: number;
+    mediumConfidence: number;
+    lowConfidence: number;
   };
   lastSyncedAt: Date;
 }
