@@ -9,6 +9,8 @@ import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
 import { fishCommand } from './commands/fish.js';
 import { progressCommand } from './commands/progress.js';
+import { titleCommand } from './commands/title.js';
+import { achievementCommand } from './commands/achievement.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -89,11 +91,19 @@ program
   .description('View player progress and statistics')
   .option('--quests', 'Show only quest progress')
   .option('--fish', 'Show only fishing progress')
+  .option('--titles', 'Show only title progress')
+  .option('--achievements', 'Show only achievement progress')
   .option('--jobs', 'Show only job progress')
   .option('--recent', 'Show only recent activity')
   .action(async (options) => {
     await progressCommand(options);
   });
+
+// Title command
+program.addCommand(titleCommand);
+
+// Achievement command
+program.addCommand(achievementCommand);
 
 // Guide command for quest walkthroughs
 program

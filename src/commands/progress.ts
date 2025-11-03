@@ -12,6 +12,8 @@ export interface ProgressCommandOptions {
   quests?: boolean;
   fish?: boolean;
   jobs?: boolean;
+  titles?: boolean;
+  achievements?: boolean;
   recent?: boolean;
 }
 
@@ -29,23 +31,41 @@ export async function progressCommand(options: ProgressCommandOptions): Promise<
 
   console.log(chalk.bold.cyan(`\n=== Progress for ${character.name} ===\n`));
 
+  const showAll =
+    !options.quests &&
+    !options.fish &&
+    !options.jobs &&
+    !options.titles &&
+    !options.achievements &&
+    !options.recent;
+
   // Show quests if no specific option or --quests
-  if ((!options.fish && !options.jobs && !options.recent) || options.quests) {
+  if (showAll || options.quests) {
     showQuestProgress(stats);
   }
 
   // Show fish if no specific option or --fish
-  if ((!options.quests && !options.jobs && !options.recent) || options.fish) {
+  if (showAll || options.fish) {
     showFishProgress(stats);
   }
 
+  // Show titles if no specific option or --titles
+  if (showAll || options.titles) {
+    showTitleProgress(stats);
+  }
+
+  // Show achievements if no specific option or --achievements
+  if (showAll || options.achievements) {
+    showAchievementProgress(stats);
+  }
+
   // Show jobs if no specific option or --jobs
-  if ((!options.quests && !options.fish && !options.recent) || options.jobs) {
+  if (showAll || options.jobs) {
     showJobProgress(stats);
   }
 
   // Show recent activity if requested or no specific option
-  if (options.recent || (!options.quests && !options.fish && !options.jobs)) {
+  if (options.recent || showAll) {
     showRecentActivity(stats);
   }
 
@@ -85,8 +105,38 @@ function showFishProgress(stats: any): void {
   );
 }
 
+function showTitleProgress(stats: any): void {
+  console.log(chalk.bold.yellow('👑 Title Collection\n'));
+
+  const percentage = stats.titleCompletionPercentage;
+  const barLength = 30;
+  const filledLength = Math.round((percentage / 100) * barLength);
+  const bar =
+    chalk.yellow('█'.repeat(filledLength)) + chalk.gray('░'.repeat(barLength - filledLength));
+
+  console.log(`  ${bar} ${percentage.toFixed(1)}%`);
+  console.log(
+    `  ${chalk.yellow(stats.unlockedTitles.toLocaleString())} / ${stats.totalTitles.toLocaleString()} titles unlocked\n`
+  );
+}
+
+function showAchievementProgress(stats: any): void {
+  console.log(chalk.bold.magenta('🏆 Achievements\n'));
+
+  const percentage = stats.achievementCompletionPercentage;
+  const barLength = 30;
+  const filledLength = Math.round((percentage / 100) * barLength);
+  const bar =
+    chalk.magenta('█'.repeat(filledLength)) + chalk.gray('░'.repeat(barLength - filledLength));
+
+  console.log(`  ${bar} ${percentage.toFixed(1)}%`);
+  console.log(
+    `  ${chalk.magenta(stats.unlockedAchievements.toLocaleString())} / ${stats.totalAchievements.toLocaleString()} achievements unlocked\n`
+  );
+}
+
 function showJobProgress(stats: any): void {
-  console.log(chalk.bold.magenta('⚔️  Top Jobs\n'));
+  console.log(chalk.bold.cyan('⚔️  Top Jobs\n'));
 
   if (stats.topJobs.length === 0) {
     console.log(chalk.gray('  No job data available\n'));
@@ -121,7 +171,13 @@ function showRecentActivity(stats: any): void {
   stats.recentActivity.forEach((activity: any) => {
     const date = new Date(activity.timestamp);
     const timeAgo = formatTimeAgo(date);
-    const icon = activity.type === 'quest' ? '📜' : '🐟';
+
+    let icon = '📜';
+    if (activity.type === 'quest') icon = '📜';
+    else if (activity.type === 'fish') icon = '🐟';
+    else if (activity.type === 'title') icon = '👑';
+    else if (activity.type === 'achievement') icon = '🏆';
+
     const name = activity.name || `${activity.type} #${activity.id}`;
 
     console.log(`  ${icon} ${chalk.bold(name)}`);

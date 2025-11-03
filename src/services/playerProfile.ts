@@ -18,6 +18,7 @@ import {
   ProgressStats,
   CharacterSyncResult,
 } from '../types/profile.js';
+import { UnlockedTitle, UnlockedAchievement } from '../types/title.js';
 import { getLodestoneClient } from './lodestone.js';
 
 const PROFILE_DB_PATH = join(process.cwd(), 'data', 'profile.db');
@@ -295,6 +296,135 @@ export class PlayerProfileService {
   getCompletedQuestCount(characterId: string): number {
     const row = this.db
       .prepare('SELECT COUNT(*) as count FROM completed_quests WHERE character_id = ?')
+      .get(characterId) as any;
+    return row.count;
+  }
+
+  // ==================== Title Tracking ====================
+
+  /**
+   * Mark a title as unlocked for a character
+   */
+  markTitleUnlocked(
+    characterId: string,
+    titleId: number,
+    source: string = 'manual',
+    sourceId?: number,
+    notes?: string
+  ): void {
+    const now = Date.now();
+
+    this.db
+      .prepare(
+        `INSERT INTO unlocked_titles (character_id, title_id, unlocked_at, source, source_id, notes)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(character_id, title_id) DO UPDATE SET unlocked_at = ?, source = ?, source_id = ?, notes = ?`
+      )
+      .run(
+        characterId,
+        titleId,
+        now,
+        source,
+        sourceId || null,
+        notes || null,
+        now,
+        source,
+        sourceId || null,
+        notes || null
+      );
+  }
+
+  /**
+   * Check if a title is unlocked
+   */
+  isTitleUnlocked(characterId: string, titleId: number): boolean {
+    const row = this.db
+      .prepare('SELECT id FROM unlocked_titles WHERE character_id = ? AND title_id = ?')
+      .get(characterId, titleId);
+    return !!row;
+  }
+
+  /**
+   * Get all unlocked titles for a character
+   */
+  getUnlockedTitles(characterId: string, limit?: number): UnlockedTitle[] {
+    let query = 'SELECT * FROM unlocked_titles WHERE character_id = ? ORDER BY unlocked_at DESC';
+    const params: any[] = [characterId];
+
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(limit);
+    }
+
+    const rows = this.db.prepare(query).all(...params) as any[];
+    return rows.map((row) => this.mapRowToUnlockedTitle(row));
+  }
+
+  /**
+   * Get unlocked title count for a character
+   */
+  getUnlockedTitleCount(characterId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) as count FROM unlocked_titles WHERE character_id = ?')
+      .get(characterId) as any;
+    return row.count;
+  }
+
+  // ==================== Achievement Tracking ====================
+
+  /**
+   * Mark an achievement as unlocked for a character
+   */
+  markAchievementUnlocked(
+    characterId: string,
+    achievementId: number,
+    source: string = 'manual',
+    notes?: string
+  ): void {
+    const now = Date.now();
+
+    this.db
+      .prepare(
+        `INSERT INTO unlocked_achievements (character_id, achievement_id, unlocked_at, source, notes)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(character_id, achievement_id) DO UPDATE SET unlocked_at = ?, source = ?, notes = ?`
+      )
+      .run(characterId, achievementId, now, source, notes || null, now, source, notes || null);
+  }
+
+  /**
+   * Check if an achievement is unlocked
+   */
+  isAchievementUnlocked(characterId: string, achievementId: number): boolean {
+    const row = this.db
+      .prepare('SELECT id FROM unlocked_achievements WHERE character_id = ? AND achievement_id = ?')
+      .get(characterId, achievementId);
+    return !!row;
+  }
+
+  /**
+   * Get all unlocked achievements for a character
+   */
+  getUnlockedAchievements(characterId: string, limit?: number): UnlockedAchievement[] {
+    let query =
+      'SELECT * FROM unlocked_achievements WHERE character_id = ? ORDER BY unlocked_at DESC';
+    const params: any[] = [characterId];
+
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(limit);
+    }
+
+    const rows = this.db.prepare(query).all(...params) as any[];
+    return rows.map((row) => this.mapRowToUnlockedAchievement(row));
+  }
+
+  /**
+   * Get unlocked achievement count for a character
+   */
+  getUnlockedAchievementCount(characterId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) as count FROM unlocked_achievements WHERE character_id = ?')
       .get(characterId) as any;
     return row.count;
   }
@@ -585,9 +715,25 @@ export class PlayerProfileService {
     ).count;
     const bigFishCaught = this.getBigFishCaughtCount(characterId);
 
+    // Title stats
+    const totalTitles = (this.gameDb.prepare('SELECT COUNT(*) as count FROM titles').get() as any)
+      .count;
+    const unlockedTitles = this.getUnlockedTitleCount(characterId);
+    const titleCompletionPercentage = totalTitles > 0 ? (unlockedTitles / totalTitles) * 100 : 0;
+
+    // Achievement stats
+    const totalAchievements = (
+      this.gameDb.prepare('SELECT COUNT(*) as count FROM achievements').get() as any
+    ).count;
+    const unlockedAchievements = this.getUnlockedAchievementCount(characterId);
+    const achievementCompletionPercentage =
+      totalAchievements > 0 ? (unlockedAchievements / totalAchievements) * 100 : 0;
+
     // Recent activity
     const recentQuests = this.getCompletedQuests(characterId, recentLimit);
     const recentFish = this.getCaughtFish(characterId, recentLimit);
+    const recentTitles = this.getUnlockedTitles(characterId, recentLimit);
+    const recentAchievements = this.getUnlockedAchievements(characterId, recentLimit);
 
     const recentActivity = [
       ...recentQuests.map((q) => {
@@ -614,6 +760,30 @@ export class PlayerProfileService {
           notes: f.notes,
         };
       }),
+      ...recentTitles.map((t) => {
+        const titleData = this.gameDb
+          .prepare('SELECT name_masculine FROM titles WHERE id = ?')
+          .get(t.titleId) as any;
+        return {
+          type: 'title' as const,
+          id: t.titleId,
+          name: titleData?.name_masculine,
+          timestamp: t.unlockedAt,
+          notes: t.notes,
+        };
+      }),
+      ...recentAchievements.map((a) => {
+        const achievementData = this.gameDb
+          .prepare('SELECT name FROM achievements WHERE id = ?')
+          .get(a.achievementId) as any;
+        return {
+          type: 'achievement' as const,
+          id: a.achievementId,
+          name: achievementData?.name,
+          timestamp: a.unlockedAt,
+          notes: a.notes,
+        };
+      }),
     ]
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, recentLimit);
@@ -634,6 +804,12 @@ export class PlayerProfileService {
       fishCompletionPercentage,
       bigFishCaught,
       totalBigFish,
+      totalTitles,
+      unlockedTitles,
+      titleCompletionPercentage,
+      totalAchievements,
+      unlockedAchievements,
+      achievementCompletionPercentage,
       recentActivity,
       topJobs,
     };
@@ -859,6 +1035,29 @@ export class PlayerProfileService {
       completed: row.completed === 1,
       createdAt: new Date(row.created_at),
       completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+    };
+  }
+
+  private mapRowToUnlockedTitle(row: any): UnlockedTitle {
+    return {
+      id: row.id,
+      characterId: row.character_id,
+      titleId: row.title_id,
+      unlockedAt: new Date(row.unlocked_at),
+      source: row.source,
+      sourceId: row.source_id || undefined,
+      notes: row.notes || undefined,
+    };
+  }
+
+  private mapRowToUnlockedAchievement(row: any): UnlockedAchievement {
+    return {
+      id: row.id,
+      characterId: row.character_id,
+      achievementId: row.achievement_id,
+      unlockedAt: new Date(row.unlocked_at),
+      source: row.source,
+      notes: row.notes || undefined,
     };
   }
 }

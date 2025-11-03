@@ -85,8 +85,14 @@ export interface ProgressStats {
   fishCompletionPercentage: number;
   bigFishCaught: number;
   totalBigFish: number;
+  totalTitles: number;
+  unlockedTitles: number;
+  titleCompletionPercentage: number;
+  totalAchievements: number;
+  unlockedAchievements: number;
+  achievementCompletionPercentage: number;
   recentActivity: Array<{
-    type: 'quest' | 'fish';
+    type: 'quest' | 'fish' | 'title' | 'achievement';
     id: number;
     name?: string;
     timestamp: Date;
