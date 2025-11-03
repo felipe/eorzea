@@ -239,6 +239,36 @@ async function fetchQuestById(
           `${chalk.bold('Completed:')} ${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
         );
       }
+
+      // Show source information for inferred quests
+      if (completionInfo?.source) {
+        let sourceLabel = 'Manual';
+        let sourceColor = chalk.white;
+
+        if (completionInfo.source === 'sync_inferred') {
+          sourceLabel = 'Inferred from Achievement';
+          sourceColor = chalk.yellow;
+        } else if (completionInfo.source === 'sync_confirmed') {
+          sourceLabel = 'Confirmed from Lodestone';
+          sourceColor = chalk.green;
+        }
+
+        console.log(`${chalk.bold('Source:')} ${sourceColor(sourceLabel)}`);
+
+        // Show confidence for inferred quests
+        if (completionInfo.confidence) {
+          const confidenceColor =
+            completionInfo.confidence >= 90
+              ? chalk.green
+              : completionInfo.confidence >= 70
+                ? chalk.yellow
+                : chalk.red;
+          console.log(
+            `${chalk.bold('Confidence:')} ${confidenceColor(completionInfo.confidence + '%')}`
+          );
+        }
+      }
+
       if (completionInfo?.notes) {
         console.log(`${chalk.bold('Note:')} ${chalk.gray(completionInfo.notes)}`);
       }

@@ -232,6 +232,48 @@ function showActiveCharacter(): void {
     `Fish Caught: ${chalk.green(stats.caughtFish)} / ${stats.totalFish} (${stats.fishCompletionPercentage.toFixed(1)}%)`
   );
   console.log(`Big Fish: ${chalk.green(stats.bigFishCaught)} / ${stats.totalBigFish}`);
+  console.log(
+    `Titles Unlocked: ${chalk.green(stats.unlockedTitles)} / ${stats.totalTitles} (${stats.titleCompletionPercentage.toFixed(1)}%)`
+  );
+  console.log(
+    `Achievements: ${chalk.green(stats.unlockedAchievements)} / ${stats.totalAchievements} (${stats.achievementCompletionPercentage.toFixed(1)}%)`
+  );
+
+  // Show intelligent sync statistics
+  const db = (profileService as any).db;
+  const syncStats = db
+    .prepare(
+      `
+    SELECT 
+      source,
+      COUNT(*) as count,
+      AVG(confidence) as avg_confidence
+    FROM completed_quests 
+    WHERE character_id = ?
+    GROUP BY source
+  `
+    )
+    .all(character.id) as any[];
+
+  if (syncStats.length > 0) {
+    console.log(chalk.bold.cyan('\n=== Quest Sources ===\n'));
+    syncStats.forEach((stat: any) => {
+      const sourceLabel =
+        stat.source === 'manual'
+          ? 'Manual'
+          : stat.source === 'sync_inferred'
+            ? 'Inferred'
+            : stat.source === 'sync_confirmed'
+              ? 'Confirmed'
+              : stat.source;
+
+      const confidenceText = stat.avg_confidence
+        ? ` (avg ${Math.round(stat.avg_confidence)}% confidence)`
+        : '';
+
+      console.log(`  ${sourceLabel}: ${chalk.green(stat.count)}${confidenceText}`);
+    });
+  }
 
   console.log('');
 }
