@@ -43,7 +43,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "inquirer": "^12.10.0",
-    "ora": "^9.0.0"
+    "ora": "^9.0.0",
+    "papaparse": "^5.5.3"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.6",
@@ -51,6 +52,7 @@
     "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.9.1",
+    "@types/papaparse": "^5.3.16",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9.38.0",
