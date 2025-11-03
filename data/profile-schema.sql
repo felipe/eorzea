@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS completed_quests (
   quest_id INTEGER NOT NULL,
   completed_at INTEGER NOT NULL,
   notes TEXT,
+  source TEXT DEFAULT 'manual',      -- 'manual', 'sync_inferred', 'sync_confirmed'
+  confidence INTEGER,                 -- 0-100 for inferred completions
+  inferred_from INTEGER,             -- achievement_id that caused inference
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
   UNIQUE(character_id, quest_id)
 );
@@ -89,6 +92,31 @@ CREATE TABLE IF NOT EXISTS goals (
   FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 
+-- Unlocked Titles (per character)
+CREATE TABLE IF NOT EXISTS unlocked_titles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  character_id TEXT NOT NULL,
+  title_id INTEGER NOT NULL,
+  unlocked_at INTEGER NOT NULL,
+  source TEXT DEFAULT 'manual',      -- 'manual', 'lodestone_sync', 'achievement'
+  source_id INTEGER,                  -- achievement_id if from achievement
+  notes TEXT,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+  UNIQUE(character_id, title_id)
+);
+
+-- Unlocked Achievements (per character)
+CREATE TABLE IF NOT EXISTS unlocked_achievements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  character_id TEXT NOT NULL,
+  achievement_id INTEGER NOT NULL,
+  unlocked_at INTEGER NOT NULL,
+  source TEXT DEFAULT 'manual',      -- 'manual', 'lodestone_sync'
+  notes TEXT,
+  FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+  UNIQUE(character_id, achievement_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_job_progress_char ON job_progress(character_id);
 CREATE INDEX IF NOT EXISTS idx_completed_quests_char ON completed_quests(character_id);
@@ -100,3 +128,7 @@ CREATE INDEX IF NOT EXISTS idx_bookmarks_type ON bookmarks(type);
 CREATE INDEX IF NOT EXISTS idx_session_history_timestamp ON session_history(timestamp);
 CREATE INDEX IF NOT EXISTS idx_goals_char ON goals(character_id);
 CREATE INDEX IF NOT EXISTS idx_goals_completed ON goals(completed);
+CREATE INDEX IF NOT EXISTS idx_unlocked_titles_char ON unlocked_titles(character_id);
+CREATE INDEX IF NOT EXISTS idx_unlocked_titles_title ON unlocked_titles(title_id);
+CREATE INDEX IF NOT EXISTS idx_unlocked_achievements_char ON unlocked_achievements(character_id);
+CREATE INDEX IF NOT EXISTS idx_unlocked_achievements_achievement ON unlocked_achievements(achievement_id);
