@@ -111,6 +111,7 @@ program
   .command('sync')
   .description('Intelligent sync: analyze achievements and infer quest completions')
   .option('--achievements <ids>', 'Comma-separated achievement IDs to sync')
+  .option('--from-file <path>', 'Parse achievements from Lodestone text file')
   .option('--dry-run', 'Preview changes without saving')
   .action(async (options) => {
     await syncCommand(options);
