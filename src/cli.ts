@@ -8,6 +8,7 @@ import { dirname, join } from 'path';
 import { characterCommand } from './commands/character.js';
 import { questCommand } from './commands/quest.js';
 import { fishCommand } from './commands/fish.js';
+import { gatheringCommand } from './commands/gathering.js';
 import { progressCommand } from './commands/progress.js';
 import { titleCommand } from './commands/title.js';
 import { achievementCommand } from './commands/achievement.js';
@@ -73,6 +74,32 @@ program
   .option('--show-uncaught', 'Show only uncaught fish')
   .action(async (options) => {
     await fishCommand(options);
+  });
+
+// Gathering commands
+program
+  .command('gathering')
+  .alias('gather')
+  .description('View gathering nodes (mining, logging, etc.)')
+  .option('-i, --id <id>', 'Get details for a specific node')
+  .option('-m, --mining', 'Show mining nodes')
+  .option('-l, --logging', 'Show logging/botanist nodes')
+  .option('-q, --quarrying', 'Show quarrying nodes')
+  .option('-h, --harvesting', 'Show harvesting nodes')
+  .option('--level <level>', 'Filter by level or level range (e.g., 50 or 50-60)')
+  .option('-a, --available', 'Show nodes available at current Eorzean time')
+  .option('-t, --timed', 'Show all timed nodes')
+  .option('--legendary', 'Show legendary nodes')
+  .option('--ephemeral', 'Show ephemeral nodes')
+  .option('--folklore', 'Show nodes requiring folklore books')
+  .option('--location <location>', 'Filter by location ID')
+  .option('--limit <limit>', 'Limit number of results (default: 20)')
+  .option('--gathered', 'Mark node as gathered (use with --id)')
+  .option('--note <note>', 'Add a note when marking gathered')
+  .option('--show-gathered', 'Show only gathered nodes')
+  .option('--show-ungathered', 'Show only ungathered nodes')
+  .action(async (options) => {
+    await gatheringCommand(options);
   });
 
 // Location commands

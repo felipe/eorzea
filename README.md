@@ -110,6 +110,16 @@ eorzea fish --big                # Show big fish only
 eorzea fish --patch 6.0          # Filter by patch
 eorzea fish --id 4898            # Get detailed fish info
 eorzea fish --id 4898 --caught   # Mark fish as caught
+
+# Gathering commands (mining, logging, etc.)
+eorzea gathering --mining        # Show mining nodes
+eorzea gathering --logging       # Show botanist/logging nodes
+eorzea gathering --available     # Show currently available nodes
+eorzea gathering --timed         # Show all timed nodes with schedules
+eorzea gathering --legendary     # Show legendary nodes
+eorzea gathering --ephemeral     # Show ephemeral nodes (collectables)
+eorzea gathering --level 50-60   # Filter by level range
+eorzea gathering --id 10         # Get detailed node info
 ```
 
 ### 📱 Web Interface (Mobile-Optimized)
@@ -213,6 +223,19 @@ Powered by data from [Carbuncle Plushy Fish Tracker](https://github.com/icykonek
 - Aquarium compatibility data
 - Real-time availability based on Eorzean time
 - Catch tracking per character
+
+### Gathering Node Tracking
+
+Track mining, logging, and other gathering activities:
+
+- **Mining & Quarrying** nodes with ore and mineral data
+- **Botanist & Logging** nodes with plant and wood materials
+- **Timed nodes** with Eorzean time windows
+- **Legendary nodes** requiring folklore books
+- **Ephemeral nodes** for collectables and aetherial reduction
+- Real-time availability tracking
+- Level and location filtering
+- Coordinates for easy navigation
 
 ### Title & Achievement System
 
