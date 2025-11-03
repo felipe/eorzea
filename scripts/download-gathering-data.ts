@@ -64,11 +64,13 @@ function parseCSV(content: string): any[] {
   const headers = result.data[1] as string[];
   const dataRows = result.data.slice(3) as any[][];
 
-  // Convert to objects using headers
+  // Convert to objects using headers, preserving the first column as 'key'
   return dataRows.map((row) => {
     const obj: any = {};
+    // First column is always the key/ID
+    obj.key = row[0];
     headers.forEach((header, index) => {
-      if (header && header !== '#') {
+      if (header && header !== '#' && header !== 'key') {
         obj[header] = row[index];
       }
     });

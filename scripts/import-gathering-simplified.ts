@@ -52,8 +52,8 @@ async function main() {
   // Clear previously imported data
   console.log('Clearing imported data...');
   db.exec(`
-    DELETE FROM gathering_items WHERE node_id > 1000;
-    DELETE FROM gathering_nodes WHERE id > 1000;
+    DELETE FROM gathering_items WHERE node_id >= 10000;
+    DELETE FROM gathering_nodes WHERE id >= 10000;
   `);
 
   // Import items first
@@ -141,9 +141,19 @@ async function main() {
   for (const point of data.GatheringPoint) {
     // Skip invalid entries
     if (!point.key || point.key === 0) continue;
-    if (point.GatheringPointBase === 'False' || point.GatheringPointBase === 0) continue;
+    if (!point.Type || point.Type === 0) continue;
 
-    const baseId = parseInt(point.GatheringPointBase);
+    // The Count field often references the base ID
+    let baseId = 0;
+    if (point.Count > 0 && point.Count < 2000) {
+      // Base IDs are typically under 2000
+      baseId = point.Count;
+    } else if (typeof point.GatheringPointBase === 'number' && point.GatheringPointBase > 0) {
+      baseId = point.GatheringPointBase;
+    } else {
+      continue; // Skip if we can't find a valid base ID
+    }
+
     const base = baseMap.get(baseId);
 
     if (!base || base.GatheringType === undefined) continue;
@@ -153,7 +163,17 @@ async function main() {
 
     const nodeId = point.key + 10000; // Offset to avoid conflicts
     const level = base.GatheringLevel || 1;
-    const placeId = point.PlaceName || null;
+
+    // Check if the zone exists, otherwise use default
+    let placeId = 1; // Default to Central Thanalan
+    if (point.PlaceName) {
+      const zoneCheck = db
+        .prepare('SELECT id FROM gathering_zones WHERE id = ?')
+        .get(point.PlaceName);
+      if (zoneCheck) {
+        placeId = point.PlaceName;
+      }
+    }
 
     // Check for special node types
     const transient = transientMap.get(point.key);
@@ -179,19 +199,25 @@ async function main() {
     }
 
     // Insert the node
-    insertNode.run(
-      nodeId,
-      gatheringType,
-      level,
-      placeId,
-      startHour,
-      endHour,
-      isEphemeral ? 1 : 0,
-      level >= 80 && hasTimeTable ? 1 : 0,
-      7.0,
-      baseId
-    );
-    nodeCount++;
+    try {
+      insertNode.run(
+        nodeId,
+        gatheringType,
+        level,
+        placeId,
+        startHour,
+        endHour,
+        isEphemeral ? 1 : 0,
+        level >= 80 && hasTimeTable ? 1 : 0,
+        7.0,
+        baseId
+      );
+      nodeCount++;
+    } catch (err: any) {
+      console.error(`Failed to insert node ${nodeId}: ${err.message}`);
+      console.error(`  Type: ${gatheringType}, Level: ${level}, PlaceId: ${placeId}`);
+      throw err; // Re-throw to see the full error
+    }
 
     // Add items for this node
     let slot = 1;
@@ -200,8 +226,12 @@ async function main() {
       const itemId = base[itemKey];
 
       if (itemId && itemId > 0) {
-        insertGatheringItem.run(nodeId, itemId, slot++);
-        itemMappingCount++;
+        try {
+          insertGatheringItem.run(nodeId, itemId, slot++);
+          itemMappingCount++;
+        } catch (err: any) {
+          console.error(`Failed to insert item ${itemId} for node ${nodeId}: ${err.message}`);
+        }
       }
     }
   }
