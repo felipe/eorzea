@@ -107,6 +107,7 @@ export async function syncCommand(options: SyncCommandOptions): Promise<void> {
     console.log(chalk.bold('Results:'));
     console.log(`  ${chalk.green('Achievements processed:')} ${result.achievementsProcessed}`);
     console.log(`  ${chalk.green('Quests inferred:')} ${result.questsInferred}`);
+    console.log(`  ${chalk.cyan('Fish inferred:')} ${result.fishInferred}`);
     console.log(`  ${chalk.green('High confidence (≥90%):')} ${result.highConfidence}`);
     console.log(`  ${chalk.yellow('Medium confidence (70-89%):')} ${result.mediumConfidence}`);
     console.log(`  ${chalk.red('Low confidence (<70%):')} ${result.lowConfidence}`);
@@ -228,6 +229,7 @@ async function syncFromFile(
     console.log(chalk.bold('Results:'));
     console.log(`  ${chalk.green('Achievements synced:')} ${syncResult.achievementsProcessed}`);
     console.log(`  ${chalk.green('Quests inferred:')} ${syncResult.questsInferred}`);
+    console.log(`  ${chalk.cyan('Fish inferred:')} ${syncResult.fishInferred}`);
     console.log(`  ${chalk.green('High confidence:')} ${syncResult.highConfidence}`);
     console.log(`  ${chalk.yellow('Medium confidence:')} ${syncResult.mediumConfidence}`);
     console.log(`  ${chalk.red('Low confidence:')} ${syncResult.lowConfidence}`);

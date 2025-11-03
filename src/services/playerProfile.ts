@@ -1014,6 +1014,7 @@ export class PlayerProfileService {
   ): Promise<{
     achievementsProcessed: number;
     questsInferred: number;
+    fishInferred: number;
     highConfidence: number;
     mediumConfidence: number;
     lowConfidence: number;
@@ -1069,9 +1070,20 @@ export class PlayerProfileService {
       this.markQuestsCompleteBatch(characterId, questsToMark);
     }
 
+    // Infer fish catches from completed quest objectives
+    const { inferFishFromCompletedQuests, markInferredFish } = await import(
+      './questFishInference.js'
+    );
+    const fishInferenceResult = inferFishFromCompletedQuests(characterId);
+
+    if (fishInferenceResult.fishToMark.length > 0) {
+      markInferredFish(characterId, fishInferenceResult.fishToMark);
+    }
+
     return {
       achievementsProcessed: inferenceResult.achievements.length,
       questsInferred: questsToMark.length,
+      fishInferred: fishInferenceResult.fishToMark.length,
       highConfidence: inferenceResult.summary.highConfidence,
       mediumConfidence: inferenceResult.summary.mediumConfidence,
       lowConfidence: inferenceResult.summary.lowConfidence,
