@@ -2,15 +2,406 @@ import chalk from 'chalk';
 import ora from 'ora';
 import Table from 'cli-table3';
 import { getLodestoneClient } from '../services/lodestone.js';
+import { getPlayerProfileService } from '../services/playerProfile.js';
 import { getConfig } from '../utils/config.js';
 
 export interface CharacterCommandOptions {
   name?: string;
   server?: string;
   id?: string;
+  // Profile management
+  add?: boolean;
+  list?: boolean;
+  active?: boolean;
+  switch?: string;
+  remove?: string;
+  sync?: boolean;
 }
 
 export async function characterCommand(options: CharacterCommandOptions): Promise<void> {
+  // Handle profile management commands
+  if (options.add) {
+    await addCharacterToProfile(options);
+    return;
+  }
+
+  if (options.list) {
+    listCharacters();
+    return;
+  }
+
+  if (options.active) {
+    showActiveCharacter();
+    return;
+  }
+
+  if (options.switch) {
+    switchActiveCharacter(options.switch);
+    return;
+  }
+
+  if (options.remove) {
+    removeCharacter(options.remove);
+    return;
+  }
+
+  if (options.sync) {
+    await syncCharacter(options.id);
+    return;
+  }
+
+  // Original lookup functionality (Lodestone search)
+  await lookupCharacter(options);
+}
+
+/**
+ * Add a character to the profile (requires internet)
+ */
+async function addCharacterToProfile(options: CharacterCommandOptions): Promise<void> {
+  const profileService = getPlayerProfileService();
+
+  if (!options.name) {
+    console.log(chalk.red('Error: Character name is required'));
+    console.log(
+      chalk.yellow('Usage: eorzea character --add --name "Character Name" --server "ServerName"')
+    );
+    return;
+  }
+
+  if (!options.server) {
+    console.log(chalk.red('Error: Server name is required'));
+    console.log(
+      chalk.yellow('Usage: eorzea character --add --name "Character Name" --server "ServerName"')
+    );
+    return;
+  }
+
+  const spinner = ora(`Adding character "${options.name}" from ${options.server}...`).start();
+
+  try {
+    const character = await profileService.createCharacter(options.name, options.server);
+
+    spinner.succeed(chalk.green(`Character "${character.name}" added successfully!`));
+
+    console.log(chalk.bold.cyan('\n=== Character Added ===\n'));
+    console.log(`${chalk.bold('Name:')} ${character.name}`);
+    console.log(
+      `${chalk.bold('Server:')} ${character.server} ${character.dataCenter ? `(${character.dataCenter})` : ''}`
+    );
+    console.log(`${chalk.bold('Lodestone ID:')} ${character.id}`);
+    console.log(`${chalk.bold('Active:')} ${character.isActive ? chalk.green('Yes') : 'No'}`);
+
+    if (character.title) {
+      console.log(`${chalk.bold('Title:')} ${character.title}`);
+    }
+
+    if (character.freeCompany) {
+      console.log(`${chalk.bold('Free Company:')} ${character.freeCompany}`);
+    }
+
+    // Show job levels
+    const jobs = profileService.getJobProgress(character.id);
+    if (jobs.length > 0) {
+      console.log(chalk.bold.cyan('\n=== Job Levels (Synced) ===\n'));
+      const topJobs = jobs.slice(0, 10);
+      topJobs.forEach((job) => {
+        console.log(`  ${job.jobName}: ${chalk.green(job.level)}`);
+      });
+      if (jobs.length > 10) {
+        console.log(chalk.gray(`  ... and ${jobs.length - 10} more`));
+      }
+    }
+
+    console.log(chalk.bold.green('\n✓ Character ready! All progress tracking now works offline.'));
+    console.log(chalk.yellow('  Use "eorzea sync" to update job levels from Lodestone later.\n'));
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to add character'));
+
+    const errorMessage = (error as Error).message;
+    if (
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('fetch failed')
+    ) {
+      console.error(chalk.yellow('\n⚠️  Cannot add character: No internet connection'));
+      console.error(chalk.yellow('   Character data must be fetched from Lodestone.'));
+      console.error(chalk.yellow('   Please connect to the internet and try again.\n'));
+    } else {
+      console.error(chalk.red(`\n${errorMessage}\n`));
+    }
+  }
+}
+
+/**
+ * List all characters in profile
+ */
+function listCharacters(): void {
+  const profileService = getPlayerProfileService();
+  const characters = profileService.listCharacters();
+
+  if (characters.length === 0) {
+    console.log(chalk.yellow('No characters in your profile.'));
+    console.log(
+      chalk.gray('Use "eorzea character --add --name <name> --server <server>" to add one.\n')
+    );
+    return;
+  }
+
+  console.log(chalk.bold.cyan('\n=== Your Characters ===\n'));
+
+  const table = new Table({
+    head: ['Active', 'Name', 'Server', 'DC', 'Jobs', 'Last Sync'].map((h) => chalk.cyan(h)),
+    style: {
+      head: [],
+      border: [],
+    },
+  });
+
+  characters.forEach((character) => {
+    const jobs = profileService.getJobProgress(character.id);
+    const topJob = jobs.length > 0 ? `${jobs[0].jobName} ${jobs[0].level}` : 'None';
+    const lastSync = character.lastSyncedAt ? formatRelativeTime(character.lastSyncedAt) : 'Never';
+
+    table.push([
+      character.isActive ? chalk.green('★') : '',
+      character.name,
+      character.server,
+      character.dataCenter || 'N/A',
+      topJob,
+      lastSync,
+    ]);
+  });
+
+  console.log(table.toString());
+  console.log(
+    chalk.gray('\nTip: Use "eorzea character --switch <name>" to switch active character\n')
+  );
+}
+
+/**
+ * Show active character details
+ */
+function showActiveCharacter(): void {
+  const profileService = getPlayerProfileService();
+  const character = profileService.getActiveCharacter();
+
+  if (!character) {
+    console.log(chalk.yellow('No active character.'));
+    console.log(
+      chalk.gray('Use "eorzea character --add --name <name> --server <server>" to add one.\n')
+    );
+    return;
+  }
+
+  console.log(chalk.bold.cyan('\n=== Active Character ===\n'));
+  console.log(`${chalk.bold('Name:')} ${character.name}`);
+  console.log(
+    `${chalk.bold('Server:')} ${character.server} ${character.dataCenter ? `(${character.dataCenter})` : ''}`
+  );
+  console.log(`${chalk.bold('Lodestone ID:')} ${character.id}`);
+
+  if (character.title) {
+    console.log(`${chalk.bold('Title:')} ${character.title}`);
+  }
+
+  if (character.freeCompany) {
+    console.log(`${chalk.bold('Free Company:')} ${character.freeCompany}`);
+  }
+
+  if (character.lastSyncedAt) {
+    console.log(`${chalk.bold('Last Synced:')} ${formatRelativeTime(character.lastSyncedAt)}`);
+  }
+
+  // Show top jobs
+  const jobs = profileService.getTopJobs(character.id, 10);
+  if (jobs.length > 0) {
+    console.log(chalk.bold.cyan('\n=== Top Jobs ===\n'));
+    jobs.forEach((job) => {
+      console.log(`  ${job.jobName}: ${chalk.green(job.level)}`);
+    });
+  }
+
+  // Show some stats
+  const stats = profileService.getProgressStats(character.id, 5);
+  console.log(chalk.bold.cyan('\n=== Progress ===\n'));
+  console.log(
+    `Quests Completed: ${chalk.green(stats.completedQuests)} / ${stats.totalQuests} (${stats.questCompletionPercentage.toFixed(1)}%)`
+  );
+  console.log(
+    `Fish Caught: ${chalk.green(stats.caughtFish)} / ${stats.totalFish} (${stats.fishCompletionPercentage.toFixed(1)}%)`
+  );
+  console.log(`Big Fish: ${chalk.green(stats.bigFishCaught)} / ${stats.totalBigFish}`);
+  console.log(
+    `Titles Unlocked: ${chalk.green(stats.unlockedTitles)} / ${stats.totalTitles} (${stats.titleCompletionPercentage.toFixed(1)}%)`
+  );
+  console.log(
+    `Achievements: ${chalk.green(stats.unlockedAchievements)} / ${stats.totalAchievements} (${stats.achievementCompletionPercentage.toFixed(1)}%)`
+  );
+
+  // Show intelligent sync statistics
+  const db = (profileService as any).db;
+  const syncStats = db
+    .prepare(
+      `
+    SELECT 
+      source,
+      COUNT(*) as count,
+      AVG(confidence) as avg_confidence
+    FROM completed_quests 
+    WHERE character_id = ?
+    GROUP BY source
+  `
+    )
+    .all(character.id) as any[];
+
+  if (syncStats.length > 0) {
+    console.log(chalk.bold.cyan('\n=== Quest Sources ===\n'));
+    syncStats.forEach((stat: any) => {
+      const sourceLabel =
+        stat.source === 'manual'
+          ? 'Manual'
+          : stat.source === 'sync_inferred'
+            ? 'Inferred'
+            : stat.source === 'sync_confirmed'
+              ? 'Confirmed'
+              : stat.source;
+
+      const confidenceText = stat.avg_confidence
+        ? ` (avg ${Math.round(stat.avg_confidence)}% confidence)`
+        : '';
+
+      console.log(`  ${sourceLabel}: ${chalk.green(stat.count)}${confidenceText}`);
+    });
+  }
+
+  console.log('');
+}
+
+/**
+ * Switch active character
+ */
+function switchActiveCharacter(nameOrId: string): void {
+  const profileService = getPlayerProfileService();
+  const characters = profileService.listCharacters();
+
+  // Try to find by name or ID
+  const character = characters.find(
+    (c) => c.name.toLowerCase() === nameOrId.toLowerCase() || c.id === nameOrId
+  );
+
+  if (!character) {
+    console.log(chalk.red(`Character "${nameOrId}" not found.`));
+    console.log(chalk.yellow('Use "eorzea character --list" to see all characters.\n'));
+    return;
+  }
+
+  profileService.setActiveCharacter(character.id);
+  console.log(
+    chalk.green(`✓ Active character switched to: ${character.name} (${character.server})\n`)
+  );
+}
+
+/**
+ * Remove a character
+ */
+function removeCharacter(nameOrId: string): void {
+  const profileService = getPlayerProfileService();
+  const characters = profileService.listCharacters();
+
+  // Try to find by name or ID
+  const character = characters.find(
+    (c) => c.name.toLowerCase() === nameOrId.toLowerCase() || c.id === nameOrId
+  );
+
+  if (!character) {
+    console.log(chalk.red(`Character "${nameOrId}" not found.`));
+    console.log(chalk.yellow('Use "eorzea character --list" to see all characters.\n'));
+    return;
+  }
+
+  profileService.removeCharacter(character.id);
+  console.log(chalk.green(`✓ Character "${character.name}" removed from profile.\n`));
+}
+
+/**
+ * Sync character data from Lodestone
+ */
+async function syncCharacter(characterId?: string): Promise<void> {
+  const profileService = getPlayerProfileService();
+
+  let character;
+  if (characterId) {
+    character = profileService.getCharacterById(characterId);
+  } else {
+    character = profileService.getActiveCharacter();
+  }
+
+  if (!character) {
+    console.log(chalk.red('No character to sync.'));
+    console.log(chalk.yellow('Use --id <lodestone_id> or set an active character.\n'));
+    return;
+  }
+
+  const spinner = ora(`Syncing ${character.name} from Lodestone...`).start();
+
+  try {
+    const result = await profileService.syncCharacterFromLodestone(character.id);
+
+    spinner.succeed(chalk.green(`Character "${character.name}" synced successfully!`));
+
+    console.log(chalk.bold.cyan('\n=== Sync Results ===\n'));
+    console.log(`${chalk.bold('Last Synced:')} ${result.lastSyncedAt.toLocaleString()}`);
+    console.log(`${chalk.bold('Jobs Updated:')} ${result.changes.jobsUpdated}`);
+
+    if (result.changes.newJobs.length > 0) {
+      console.log(chalk.bold.green('\nNew Jobs:'));
+      result.changes.newJobs.forEach((job) => {
+        console.log(`  + ${job}`);
+      });
+    }
+
+    if (result.changes.levelChanges.length > 0) {
+      console.log(chalk.bold.cyan('\nLevel Changes:'));
+      result.changes.levelChanges.forEach((change) => {
+        const diff = change.newLevel - change.oldLevel;
+        const arrow = diff > 0 ? chalk.green('↑') : chalk.red('↓');
+        console.log(
+          `  ${change.jobName}: ${change.oldLevel} → ${change.newLevel} ${arrow} ${Math.abs(diff)}`
+        );
+      });
+    }
+
+    if (result.changes.jobsUpdated === 0) {
+      console.log(chalk.gray('No changes detected.'));
+    }
+
+    console.log('');
+  } catch (error) {
+    spinner.fail(chalk.red('Failed to sync character'));
+
+    const errorMessage = (error as Error).message;
+    if (
+      errorMessage.includes('ENOTFOUND') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('network') ||
+      errorMessage.includes('fetch failed')
+    ) {
+      console.error(chalk.yellow('\n⚠️  Cannot sync: No internet connection'));
+      console.error(
+        chalk.yellow(`   Using cached data from ${formatRelativeTime(character.lastSyncedAt!)}`)
+      );
+      console.error(chalk.yellow('   Your progress tracking still works offline!\n'));
+    } else {
+      console.error(chalk.red(`\n${errorMessage}\n`));
+    }
+  }
+}
+
+/**
+ * Original Lodestone lookup (read-only, doesn't save to profile)
+ */
+async function lookupCharacter(options: CharacterCommandOptions): Promise<void> {
   const config = getConfig().get();
   const lodestoneClient = getLodestoneClient();
 
@@ -26,8 +417,30 @@ export async function characterCommand(options: CharacterCommandOptions): Promis
 
   // Search for character by name
   if (!characterName) {
-    console.log(chalk.red('Error: Character name is required'));
-    console.log(chalk.yellow('Use --name <name> or set DEFAULT_CHARACTER_NAME in your .env file'));
+    console.log(chalk.yellow('No search criteria provided.'));
+    console.log(chalk.gray('\nAvailable commands:'));
+    console.log(
+      chalk.gray(
+        '  eorzea character --add --name <name> --server <server>  Add character to profile'
+      )
+    );
+    console.log(
+      chalk.gray('  eorzea character --list                                 List all characters')
+    );
+    console.log(
+      chalk.gray('  eorzea character --active                               Show active character')
+    );
+    console.log(
+      chalk.gray(
+        '  eorzea character --switch <name>                        Switch active character'
+      )
+    );
+    console.log(
+      chalk.gray('  eorzea character --sync                                 Sync from Lodestone')
+    );
+    console.log(
+      chalk.gray('  eorzea character --name <name> --server <server>        Search Lodestone\n')
+    );
     return;
   }
 
@@ -131,9 +544,9 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
         const combatJobs = [
           'Paladin',
           'Warrior',
-          'Darkknight',
+          'DarkKnight',
           'Gunbreaker',
-          'Whitemage',
+          'WhiteMage',
           'Scholar',
           'Astrologian',
           'Sage',
@@ -145,10 +558,10 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
           'Bard',
           'Machinist',
           'Dancer',
-          'Blackmage',
+          'BlackMage',
           'Summoner',
-          'Redmage',
-          'Bluemage',
+          'RedMage',
+          'BlueMage',
         ];
         const crafters = [
           'Carpenter',
@@ -205,4 +618,23 @@ async function fetchCharacterById(lodestoneClient: any, characterId: string): Pr
       console.error(chalk.red(errorMessage));
     }
   }
+}
+
+/**
+ * Format a date as relative time
+ */
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
 }
