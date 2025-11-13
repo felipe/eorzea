@@ -57,3 +57,6 @@ data/
 *.db
 *.sqlite
 *.sqlite3
+
+# Lock files (project uses Yarn)
+package-lock.json
