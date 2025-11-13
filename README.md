@@ -1,8 +1,42 @@
-# Eorzea Quest Assistant
+# Eorzea Game Data Assistant
 
-A terminal-first quest tracking tool for casual FFXIV players. Now with mobile web view!
+A comprehensive offline-first FFXIV companion tool with complete item, gathering, crafting, and collectibles databases. Features terminal CLI and mobile web interface!
 
 ## Features
+
+### 🎮 Complete Game Data (NEW!)
+
+- **50,000+ Items**: Full item database with sources and uses
+- **10,000+ Recipes**: Complete crafting guide for all Disciples of the Hand
+- **Gathering System**: Mining and Botany node tracking (similar to fishing)
+- **400+ Mounts**: Track your mount collection with acquisition guides
+- **700+ Minions**: Complete companion collection tracking
+- **400+ Orchestrion Rolls**: Music collection with sources
+
+### 🔍 Item Lookup System (NEW!)
+
+- **Comprehensive Search**: Find any item by name, level, rarity, or category
+- **Source Tracking**: See where to get items (crafting, gathering, quests, vendors, dungeons)
+- **Use Tracking**: See what items are used for (recipes, quests, etc.)
+- **Cross-References**: Links to recipes, gathering nodes, and quest rewards
+- **Complete Guides**: One command shows everything about an item
+
+### ⛏️ Gathering & Crafting (NEW!)
+
+- **Mining & Botany**: Track gathering nodes similar to fishing system
+- **Timed Nodes**: Support for ephemeral/timed gathering points
+- **Recipe Lookup**: Search recipes by craft type, item, or ingredient
+- **Material Trees**: See all materials needed including sub-crafts
+- **Crafting Guides**: Complete breakdown with requirements and costs
+- **Progress Tracking**: Track gathered items and crafted recipes per character
+
+### 🏆 Collectibles Tracking (NEW!)
+
+- **Mount Collection**: Track flying, aquatic, and multi-seat mounts
+- **Minion Collection**: Battle and non-battle companion tracking
+- **Orchestrion Collection**: Music rolls organized by category
+- **Acquisition Guides**: Detailed how-to-obtain for each collectible
+- **Collection Stats**: Visual progress bars and completion percentages
 
 ### Core Tracking
 
@@ -10,8 +44,8 @@ A terminal-first quest tracking tool for casual FFXIV players. Now with mobile w
 - **Fish Tracking**: Track fish availability, time windows, and catch requirements
 - **Quest Objectives**: View fish, NPC, item, and enemy objectives with full details
 - **Character Lookup**: Check character information via Lodestone
-- **Eorzean Time**: Real-time Eorzean time calculation for time-sensitive fishing
-- **100% Offline**: All quest and fish data stored locally in SQLite
+- **Eorzean Time**: Real-time Eorzean time calculation for time-sensitive activities
+- **100% Offline**: All game data stored locally in SQLite databases
 
 ### 🎯 Player Memory System (NEW!)
 
@@ -110,6 +144,47 @@ eorzea fish --big                # Show big fish only
 eorzea fish --patch 6.0          # Filter by patch
 eorzea fish --id 4898            # Get detailed fish info
 eorzea fish --id 4898 --caught   # Mark fish as caught
+
+# Item commands
+eorzea item search "Darksteel Ore"
+eorzea item --id 5115
+eorzea item --id 5115 --guide    # Complete item guide
+eorzea item --name "Potion" --level 50 --limit 10
+
+# Gathering commands
+eorzea gather --mining           # Show mining nodes
+eorzea gather --botany           # Show botany nodes
+eorzea gather --item "Darksteel Ore"
+eorzea gather --level 50
+eorzea gather --timed            # Show timed nodes only
+eorzea gather --id 123 --gathered
+
+# Crafting commands
+eorzea craft search "Darksteel Ingot"
+eorzea craft --id 456
+eorzea craft --id 456 --guide    # Complete crafting guide
+eorzea craft --id 456 --crafted
+eorzea craft --type Armorer
+eorzea craft --ingredient "Darksteel Ore"
+
+# Mount commands
+eorzea mount search "Phoenix"
+eorzea mount --id 89
+eorzea mount --id 89 --obtained
+eorzea mount --flying            # Show flying mounts only
+
+# Minion commands
+eorzea minion search "Wind-up"
+eorzea minion --id 123
+eorzea minion --id 123 --obtained
+
+# Orchestrion commands
+eorzea orchestrion search "Answers"
+eorzea orchestrion --id 45
+eorzea orchestrion --id 45 --obtained
+
+# Collection stats
+eorzea collection                # Show all collection progress
 ```
 
 ### 📱 Web Interface (Mobile-Optimized)
@@ -124,13 +199,15 @@ yarn web
 
 **Features:**
 
-- Browse all fish and quests
-- Search by name or ID
-- View detailed quest objectives
-- See fish catch requirements
-- Check currently available fish
-- Mobile-responsive design
-- Dark theme
+- Browse all fish, quests, items, recipes, gathering nodes, and collectibles
+- Search by name or ID across all systems
+- View detailed quest objectives and item information
+- See fish catch requirements and gathering node details
+- Check currently available fish and timed gathering nodes
+- Browse and search mounts, minions, and orchestrion rolls
+- View collection statistics and progress
+- Mobile-responsive design with dark theme
+- Complete API endpoints for all data
 
 See [`docs/WEB_VIEW.md`](docs/WEB_VIEW.md) for detailed web view documentation.
 
@@ -169,6 +246,24 @@ DEFAULT_CHARACTER_NAME=Your Character Name
 DEFAULT_SERVER=YourServer
 ```
 
+## Data Setup
+
+Before using the new features, you need to download and seed game data:
+
+```bash
+# Download CSV files from ffxiv-datamining (requires internet)
+npm run download-csv
+
+# Seed all game data (items, recipes, gathering, collectibles)
+npm run seed-game-data
+
+# Or seed selectively
+npm run seed-game-data -- --skip-gathering
+npm run seed-game-data -- --skip-collectibles
+```
+
+See [`docs/GAME_DATA_SETUP.md`](docs/GAME_DATA_SETUP.md) for detailed setup instructions.
+
 ## Development
 
 ```bash
@@ -189,9 +284,70 @@ yarn update-fish-data
 
 # Update quest data
 yarn update-quest-data
+
+# Seed game data
+yarn seed-game-data
 ```
 
 ## What's Inside
+
+### Item System (NEW!)
+
+Powered by data from [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining):
+
+- **50,000+ items** from all expansions
+- **Item sources**: Crafting, gathering, quests, vendors, dungeons, raids
+- **Item uses**: Recipe ingredients, quest requirements, leves
+- **Full metadata**: Level, rarity, categories, stack size, tradability
+- **Cross-references**: Links to recipes, gathering nodes, quests
+- **Search and filter**: By name, level, rarity, category, source type
+- **Complete guides**: One command shows everything about an item
+
+### Crafting System (NEW!)
+
+- **10,000+ recipes** for all Disciples of the Hand
+- **8 craft types**: Carpenter, Blacksmith, Armorer, Goldsmith, Leatherworker, Weaver, Alchemist, Culinarian
+- **Recipe details**: Level, stars, requirements (craftsmanship, control)
+- **Ingredient tracking**: With quantities and HQ availability
+- **Material trees**: Recursive breakdown of all sub-crafts
+- **Crafting guides**: Complete walkthrough with requirements and costs
+- **Search options**: By craft type, result item, ingredient, level
+- **Progress tracking**: Track crafted recipes per character
+
+### Gathering System (NEW!)
+
+- **Thousands of gathering nodes** for Mining, Botany, and Spearfishing
+- **Node locations**: Map coordinates and territory names
+- **Timed nodes**: Support for ephemeral/limited time gathering points
+- **Level requirements**: Required gatherer level for each node
+- **Hidden items**: Items requiring perception/GP
+- **Search options**: By type, level, location, item name
+- **Progress tracking**: Track gathered items per character
+- **Similar to fishing**: Follows the same patterns as fish tracking
+
+### Collectibles System (NEW!)
+
+**Mounts** (400+):
+- Flying and aquatic mount indicators
+- Multi-seat mount tracking
+- Source information (quest, achievement, shop, dungeon, etc.)
+- Collection progress tracking
+
+**Minions** (700+):
+- Battle companion indicators
+- Source information for all minions
+- Collection completion tracking
+
+**Orchestrion Rolls** (400+):
+- Music organized by categories
+- Source information for each roll
+- Music collection tracking
+
+All collectibles include:
+- Detailed how-to-obtain guides
+- Visual progress bars
+- Per-character tracking
+- Search and filter options
 
 ### Quest System
 

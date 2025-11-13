@@ -1,7 +1,7 @@
 {
   "name": "eorzea",
   "version": "0.1.0",
-  "description": "FFXIV Quest Assistant - A terminal-first quest tracking tool for casual FFXIV players",
+  "description": "FFXIV Game Data Assistant - Comprehensive offline-first companion tool with items, crafting, gathering, quests, and collectibles tracking",
   "type": "module",
   "main": "src/cli.ts",
   "bin": "./bin/eorzea.js",
@@ -17,14 +17,24 @@
     "update-fish-data": "./scripts/update-fish-data.sh",
     "seed-fish-db": "tsx scripts/seed-fish-db.ts",
     "update-quest-data": "tsx scripts/download-quest-data.ts && tsx scripts/parse-quest-data.ts && tsx scripts/seed-quest-db.ts",
-    "seed-quest-db": "tsx scripts/seed-quest-db.ts"
+    "seed-quest-db": "tsx scripts/seed-quest-db.ts",
+    "download-csv": "tsx scripts/download-game-csv.ts",
+    "seed-game-data": "tsx scripts/seed-game-data.ts"
   },
   "keywords": [
     "ffxiv",
     "final-fantasy-xiv",
     "quest",
+    "crafting",
+    "gathering",
+    "items",
+    "recipes",
+    "mounts",
+    "minions",
+    "orchestrion",
     "assistant",
     "cli",
+    "offline",
     "gaming"
   ],
   "author": "Feli.pe Oduardo Sierra",
