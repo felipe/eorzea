@@ -6,6 +6,10 @@
 import express from 'express';
 import { FishTrackerService } from './services/fishTracker.js';
 import { QuestTrackerService } from './services/questTracker.js';
+import { ItemService } from './services/itemService.js';
+import { GatheringService } from './services/gatheringService.js';
+import { CraftingService } from './services/craftingService.js';
+import { CollectiblesService } from './services/collectiblesService.js';
 import {
   getEorzeanTime,
   isInTimeWindow,
@@ -19,6 +23,10 @@ const PORT = process.env.PORT || 3000;
 
 const fishTracker = new FishTrackerService();
 const questTracker = new QuestTrackerService();
+const itemService = new ItemService();
+const gatheringService = new GatheringService();
+const craftingService = new CraftingService();
+const collectiblesService = new CollectiblesService();
 
 // Serve static CSS
 app.get('/style.css', (_req, res) => {
@@ -198,7 +206,7 @@ app.get('/', (_req, res) => {
       <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
       <div class="container">
         <h1>🎮 Eorzea Tracker</h1>
-        
+
         <div class="card">
           <h2>🎣 Fish Database</h2>
           <p style="color: #aaa; margin-bottom: 12px;">
@@ -228,9 +236,60 @@ app.get('/', (_req, res) => {
         </div>
 
         <div class="card">
+          <h2>📦 Items Database</h2>
+          <p style="color: #aaa; margin-bottom: 12px;">
+            Browse items, sources, and uses
+          </p>
+          <input type="text" class="search" id="itemSearch" placeholder="Search items by name...">
+          <div class="quick-links">
+            <a href="/items" class="quick-link">📋 Browse Items</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>⛏️ Gathering</h2>
+          <p style="color: #aaa; margin-bottom: 12px;">
+            Mining, Botany, and gathering nodes
+          </p>
+          <div class="quick-links">
+            <a href="/gathering" class="quick-link">📋 Browse Nodes</a>
+            <a href="/gathering?type=Mining" class="quick-link">⛏️ Mining</a>
+            <a href="/gathering?type=Logging" class="quick-link">🪓 Logging</a>
+            <a href="/gathering?type=Harvesting" class="quick-link">🌿 Harvesting</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🔨 Crafting</h2>
+          <p style="color: #aaa; margin-bottom: 12px;">
+            Recipes for all crafting classes
+          </p>
+          <input type="text" class="search" id="recipeSearch" placeholder="Search recipes by name...">
+          <div class="quick-links">
+            <a href="/crafting" class="quick-link">📋 Browse Recipes</a>
+            <a href="/crafting?craft_type=Carpenter" class="quick-link">🪚 CRP</a>
+            <a href="/crafting?craft_type=Blacksmith" class="quick-link">⚒️ BSM</a>
+            <a href="/crafting?craft_type=Culinarian" class="quick-link">🍳 CUL</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🎨 Collectibles</h2>
+          <p style="color: #aaa; margin-bottom: 12px;">
+            Mounts, minions, and orchestrion rolls
+          </p>
+          <div class="quick-links">
+            <a href="/mounts" class="quick-link">🐴 Mounts</a>
+            <a href="/companions" class="quick-link">🐾 Minions</a>
+            <a href="/orchestrion" class="quick-link">🎵 Orchestrion</a>
+            <a href="/collection" class="quick-link">📊 Collection Stats</a>
+          </div>
+        </div>
+
+        <div class="card">
           <h2>ℹ️ About</h2>
           <p style="color: #aaa; font-size: 0.9em;">
-            Offline-first FFXIV fish and quest tracker. All data stored locally on your device.
+            Offline-first FFXIV tracker. All data stored locally on your device.
           </p>
         </div>
       </div>
@@ -251,6 +310,16 @@ app.get('/', (_req, res) => {
         document.getElementById('questSearch').addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             window.location = '/quests?search=' + encodeURIComponent(e.target.value);
+          }
+        });
+        document.getElementById('itemSearch').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            window.location = '/items?name=' + encodeURIComponent(e.target.value);
+          }
+        });
+        document.getElementById('recipeSearch').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            window.location = '/crafting?item=' + encodeURIComponent(e.target.value);
           }
         });
       </script>
@@ -911,6 +980,1350 @@ app.get('/quest/:id', (req, res) => {
   `);
 });
 
+// ============================================================================
+// API ROUTES - Items
+// ============================================================================
+
+// Search items
+app.get('/api/items', (req, res) => {
+  try {
+    const options = {
+      name: req.query.name as string,
+      level_min: req.query.level_min ? parseInt(req.query.level_min as string) : undefined,
+      level_max: req.query.level_max ? parseInt(req.query.level_max as string) : undefined,
+      rarity: req.query.rarity ? parseInt(req.query.rarity as string) : undefined,
+      category: req.query.category ? parseInt(req.query.category as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = itemService.searchItems(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search items', message: String(error) });
+  }
+});
+
+// Get item by ID
+app.get('/api/items/:id', (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const item = itemService.getItemById(itemId);
+
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get item', message: String(error) });
+  }
+});
+
+// Get item guide
+app.get('/api/items/:id/guide', (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const guide = itemService.getItemGuide(itemId);
+
+    if (!guide) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    res.json(guide);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get item guide', message: String(error) });
+  }
+});
+
+// Get item sources
+app.get('/api/items/:id/sources', (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const sources = itemService.getItemSources(itemId);
+    res.json(sources);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get item sources', message: String(error) });
+  }
+});
+
+// Get item uses
+app.get('/api/items/:id/uses', (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const uses = itemService.getItemUses(itemId);
+    res.json(uses);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get item uses', message: String(error) });
+  }
+});
+
+// Get item categories
+app.get('/api/items/categories', (_req, res) => {
+  try {
+    const categories = itemService.getItemCategories();
+    res.json(categories);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get item categories', message: String(error) });
+  }
+});
+
+// ============================================================================
+// API ROUTES - Gathering
+// ============================================================================
+
+// Search gathering points
+app.get('/api/gathering/points', (req, res) => {
+  try {
+    const options: any = {
+      gathering_type: req.query.type as string,
+      level_min: req.query.level_min ? parseInt(req.query.level_min as string) : undefined,
+      level_max: req.query.level_max ? parseInt(req.query.level_max as string) : undefined,
+      place_name: req.query.location as string,
+      item_name: req.query.item as string,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = gatheringService.searchGatheringPoints(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search gathering points', message: String(error) });
+  }
+});
+
+// Get gathering point by ID
+app.get('/api/gathering/points/:id', (req, res) => {
+  try {
+    const pointId = parseInt(req.params.id);
+    const point = gatheringService.getGatheringPointById(pointId);
+
+    if (!point) {
+      return res.status(404).json({ error: 'Gathering point not found' });
+    }
+
+    res.json(point);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get gathering point', message: String(error) });
+  }
+});
+
+// Get available timed nodes
+app.get('/api/gathering/available', (_req, res) => {
+  try {
+    const nodes = gatheringService.getAvailableNodes(new Date());
+    res.json(nodes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get available nodes', message: String(error) });
+  }
+});
+
+// Get gathering types
+app.get('/api/gathering/types', (_req, res) => {
+  try {
+    const types = gatheringService.getGatheringTypes();
+    res.json(types);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get gathering types', message: String(error) });
+  }
+});
+
+// ============================================================================
+// API ROUTES - Crafting
+// ============================================================================
+
+// Search recipes
+app.get('/api/recipes', (req, res) => {
+  try {
+    const options: any = {
+      craft_type: req.query.craft_type as string,
+      result_item_name: req.query.result_item as string,
+      ingredient_item_name: req.query.ingredient as string,
+      level_min: req.query.level_min ? parseInt(req.query.level_min as string) : undefined,
+      level_max: req.query.level_max ? parseInt(req.query.level_max as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = craftingService.searchRecipes(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search recipes', message: String(error) });
+  }
+});
+
+// Get recipe by ID
+app.get('/api/recipes/:id', (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.id);
+    const recipe = craftingService.getRecipeById(recipeId);
+
+    if (!recipe) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    res.json(recipe);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get recipe', message: String(error) });
+  }
+});
+
+// Get recipe guide
+app.get('/api/recipes/:id/guide', (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.id);
+    const guide = craftingService.getCraftingGuide(recipeId);
+
+    if (!guide) {
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+
+    res.json(guide);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get crafting guide', message: String(error) });
+  }
+});
+
+// Get recipe material tree
+app.get('/api/recipes/:id/materials', (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.id);
+    const materialTree = craftingService.getMaterialTree(recipeId);
+    res.json(materialTree);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get material tree', message: String(error) });
+  }
+});
+
+// Get craft types
+app.get('/api/craft-types', (_req, res) => {
+  try {
+    const craftTypes = craftingService.getCraftTypes();
+    res.json(craftTypes);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get craft types', message: String(error) });
+  }
+});
+
+// ============================================================================
+// API ROUTES - Collectibles
+// ============================================================================
+
+// Search mounts
+app.get('/api/mounts', (req, res) => {
+  try {
+    const options = {
+      name: req.query.name as string,
+      is_flying: req.query.is_flying === 'true' ? true : req.query.is_flying === 'false' ? false : undefined,
+      is_aquatic: req.query.is_aquatic === 'true' ? true : req.query.is_aquatic === 'false' ? false : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = collectiblesService.searchMounts(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search mounts', message: String(error) });
+  }
+});
+
+// Get mount by ID
+app.get('/api/mounts/:id', (req, res) => {
+  try {
+    const mountId = parseInt(req.params.id);
+    const mount = collectiblesService.getMountById(mountId);
+
+    if (!mount) {
+      return res.status(404).json({ error: 'Mount not found' });
+    }
+
+    res.json(mount);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get mount', message: String(error) });
+  }
+});
+
+// Search companions
+app.get('/api/companions', (req, res) => {
+  try {
+    const options = {
+      name: req.query.name as string,
+      is_battle: req.query.is_battle === 'true' ? true : req.query.is_battle === 'false' ? false : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = collectiblesService.searchCompanions(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search companions', message: String(error) });
+  }
+});
+
+// Get companion by ID
+app.get('/api/companions/:id', (req, res) => {
+  try {
+    const companionId = parseInt(req.params.id);
+    const companion = collectiblesService.getCompanionById(companionId);
+
+    if (!companion) {
+      return res.status(404).json({ error: 'Companion not found' });
+    }
+
+    res.json(companion);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get companion', message: String(error) });
+  }
+});
+
+// Search orchestrion rolls
+app.get('/api/orchestrion', (req, res) => {
+  try {
+    const options = {
+      name: req.query.name as string,
+      category_id: req.query.category ? parseInt(req.query.category as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = collectiblesService.searchOrchestrion(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search orchestrion rolls', message: String(error) });
+  }
+});
+
+// Get orchestrion roll by ID
+app.get('/api/orchestrion/:id', (req, res) => {
+  try {
+    const orchestrionId = parseInt(req.params.id);
+    const orchestrion = collectiblesService.getOrchestrionById(orchestrionId);
+
+    if (!orchestrion) {
+      return res.status(404).json({ error: 'Orchestrion roll not found' });
+    }
+
+    res.json(orchestrion);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get orchestrion roll', message: String(error) });
+  }
+});
+
+// Get collection stats
+app.get('/api/collection/stats', (req, res) => {
+  try {
+    const characterId = req.query.character_id ? parseInt(req.query.character_id as string) : undefined;
+
+    if (!characterId) {
+      return res.status(400).json({ error: 'character_id parameter is required' });
+    }
+
+    const stats = collectiblesService.getCollectionStats(characterId);
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get collection stats', message: String(error) });
+  }
+});
+
+// ============================================================================
+// WEB UI ROUTES - Items
+// ============================================================================
+
+// Browse items page
+app.get('/items', (req, res) => {
+  try {
+    const name = req.query.name as string;
+    const category = req.query.category ? parseInt(req.query.category as string) : undefined;
+
+    const result = itemService.searchItems({
+      name,
+      category,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Items - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>📦 Items</h1>
+
+          <input type="text" class="search" id="itemSearch" placeholder="Search items by name..." value="${name || ''}">
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.items.length} of ${result.total} items
+          </p>
+
+          ${
+            result.items.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">📦</div>
+              <p>No items found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.items
+            .map(
+              (item) => `
+            <div class="card">
+              <a href="/item/${item.id}" style="font-size: 1.1em; font-weight: bold;">
+                ${item.name}
+              </a>
+              <div style="margin-top: 8px;">
+                <span class="badge">Level ${item.level_item}</span>
+                ${item.rarity ? `<span class="badge">Rarity ${item.rarity}</span>` : ''}
+                ${item.can_be_hq ? '<span class="badge">HQ</span>' : ''}
+                ${item.is_collectible ? '<span class="badge">Collectible</span>' : ''}
+              </div>
+              ${
+                item.ui_category_name
+                  ? `<div style="margin-top: 4px; color: #aaa; font-size: 0.9em;">${item.ui_category_name}</div>`
+                  : ''
+              }
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('itemSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/items?name=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading items');
+  }
+});
+
+// Item details page
+app.get('/item/:id', (req, res) => {
+  try {
+    const itemId = parseInt(req.params.id);
+    const item = itemService.getItemById(itemId);
+
+    if (!item) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Item Not Found - Eorzea Tracker</title>
+          <link rel="stylesheet" href="/style.css">
+        </head>
+        <body>
+          <div class="container">
+            <a href="/items" class="back-link">← Back to Items</a>
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">📦</div>
+              <h1>Item Not Found</h1>
+              <p>Item ID ${itemId} doesn't exist</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>${item.name} - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/items" class="back-link">← Back to Items</a>
+          <h1>📦 ${item.name}</h1>
+
+          <div class="card">
+            <h2>Item Info</h2>
+            <div class="info-row">
+              <span class="label">Level</span>
+              <span class="value">${item.level_item}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Rarity</span>
+              <span class="value">${item.rarity}</span>
+            </div>
+            ${
+              item.ui_category_name
+                ? `
+            <div class="info-row">
+              <span class="label">Category</span>
+              <span class="value">${item.ui_category_name}</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              item.description
+                ? `
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #0f3460; color: #aaa;">
+              ${item.description}
+            </div>
+            `
+                : ''
+            }
+          </div>
+
+          ${
+            item.sources && item.sources.length > 0
+              ? `
+          <div class="card">
+            <h2>How to Obtain</h2>
+            ${item.sources
+              .map(
+                (source) => `
+              <div style="padding: 8px 0; border-bottom: 1px solid #0f3460;">
+                <div style="font-weight: bold;">${source.source_type}</div>
+                ${source.source_name ? `<div style="color: #aaa; font-size: 0.9em;">${source.source_name}</div>` : ''}
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          `
+              : ''
+          }
+
+          ${
+            item.uses && item.uses.length > 0
+              ? `
+          <div class="card">
+            <h2>Used For</h2>
+            ${item.uses
+              .map(
+                (use) => `
+              <div style="padding: 8px 0; border-bottom: 1px solid #0f3460;">
+                <div style="font-weight: bold;">${use.use_type}</div>
+                ${use.use_name ? `<div style="color: #aaa; font-size: 0.9em;">${use.use_name}</div>` : ''}
+                ${use.quantity_required && use.quantity_required > 1 ? `<div style="color: #aaa; font-size: 0.9em;">Quantity: ${use.quantity_required}</div>` : ''}
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          `
+              : ''
+          }
+        </div>
+        <script src="/clock.js"></script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading item details');
+  }
+});
+
+// ============================================================================
+// WEB UI ROUTES - Gathering
+// ============================================================================
+
+// Browse gathering nodes page
+app.get('/gathering', (req, res) => {
+  try {
+    const type = req.query.type as string;
+    const location = req.query.location as string;
+
+    const result = gatheringService.searchGatheringPoints({
+      gathering_type: type as any,
+      place_name: location,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Gathering - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>⛏️ Gathering Nodes</h1>
+
+          <input type="text" class="search" id="locationSearch" placeholder="Search by location..." value="${location || ''}">
+
+          <div class="quick-links">
+            <a href="/gathering?type=Mining" class="quick-link">⛏️ Mining</a>
+            <a href="/gathering?type=Quarrying" class="quick-link">🪨 Quarrying</a>
+            <a href="/gathering?type=Logging" class="quick-link">🪓 Logging</a>
+            <a href="/gathering?type=Harvesting" class="quick-link">🌿 Harvesting</a>
+          </div>
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.points.length} of ${result.total} gathering points
+          </p>
+
+          ${
+            result.points.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">⛏️</div>
+              <p>No gathering points found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.points
+            .map(
+              (point) => `
+            <div class="card">
+              <a href="/gathering/${point.id}" style="font-size: 1.1em; font-weight: bold;">
+                ${point.place_name || point.territory_name || 'Unknown Location'}
+              </a>
+              <div style="margin-top: 8px;">
+                <span class="badge">${point.gathering_type_name}</span>
+                <span class="badge">Level ${point.gathering_level}</span>
+                ${point.is_limited ? '<span class="badge" style="background: #ff6b6b;">⏰ Timed</span>' : ''}
+              </div>
+              ${
+                point.items && point.items.length > 0
+                  ? `
+                <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
+                  ${point.items.length} item${point.items.length > 1 ? 's' : ''} available
+                </div>
+              `
+                  : ''
+              }
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('locationSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/gathering?location=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading gathering points');
+  }
+});
+
+// Gathering node details page
+app.get('/gathering/:id', (req, res) => {
+  try {
+    const pointId = parseInt(req.params.id);
+    const point = gatheringService.getGatheringPointById(pointId);
+
+    if (!point) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Gathering Point Not Found - Eorzea Tracker</title>
+          <link rel="stylesheet" href="/style.css">
+        </head>
+        <body>
+          <div class="container">
+            <a href="/gathering" class="back-link">← Back to Gathering</a>
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">⛏️</div>
+              <h1>Gathering Point Not Found</h1>
+              <p>Gathering point ID ${pointId} doesn't exist</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>${point.place_name || 'Gathering Point'} - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/gathering" class="back-link">← Back to Gathering</a>
+          <h1>⛏️ ${point.place_name || point.territory_name || 'Gathering Point'}</h1>
+
+          <div class="card">
+            <h2>Node Info</h2>
+            <div class="info-row">
+              <span class="label">Type</span>
+              <span class="value">${point.gathering_type_name}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Level</span>
+              <span class="value">${point.gathering_level}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Territory</span>
+              <span class="value">${point.territory_name || 'Unknown'}</span>
+            </div>
+            ${
+              point.is_limited
+                ? `
+            <div class="info-row">
+              <span class="label">Availability</span>
+              <span class="value" style="color: #ff6b6b;">⏰ Timed Node</span>
+            </div>
+            `
+                : ''
+            }
+          </div>
+
+          ${
+            point.items && point.items.length > 0
+              ? `
+          <div class="card">
+            <h2>Available Items</h2>
+            ${point.items
+              .map(
+                (item) => `
+              <div style="padding: 12px 0; border-bottom: 1px solid #0f3460;">
+                <div style="font-weight: bold;">
+                  <a href="/item/${item.item_id}">${item.item_name}</a>
+                </div>
+                <div style="margin-top: 4px;">
+                  <span class="badge">Level ${item.item_level}</span>
+                  ${item.is_hidden ? '<span class="badge" style="background: #9b59b6;">Hidden</span>' : ''}
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          `
+              : ''
+          }
+        </div>
+        <script src="/clock.js"></script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading gathering point details');
+  }
+});
+
+// ============================================================================
+// WEB UI ROUTES - Crafting
+// ============================================================================
+
+// Browse recipes page
+app.get('/crafting', (req, res) => {
+  try {
+    const craftType = req.query.craft_type as string;
+    const item = req.query.item as string;
+
+    const result = craftingService.searchRecipes({
+      craft_type: craftType as any,
+      result_item_name: item,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Crafting - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>🔨 Crafting Recipes</h1>
+
+          <input type="text" class="search" id="recipeSearch" placeholder="Search recipes by item name..." value="${item || ''}">
+
+          <div class="quick-links">
+            <a href="/crafting?craft_type=Carpenter" class="quick-link">🪚 CRP</a>
+            <a href="/crafting?craft_type=Blacksmith" class="quick-link">⚒️ BSM</a>
+            <a href="/crafting?craft_type=Armorer" class="quick-link">🛡️ ARM</a>
+            <a href="/crafting?craft_type=Goldsmith" class="quick-link">💍 GSM</a>
+            <a href="/crafting?craft_type=Leatherworker" class="quick-link">🧵 LTW</a>
+            <a href="/crafting?craft_type=Weaver" class="quick-link">🪡 WVR</a>
+            <a href="/crafting?craft_type=Alchemist" class="quick-link">⚗️ ALC</a>
+            <a href="/crafting?craft_type=Culinarian" class="quick-link">🍳 CUL</a>
+          </div>
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.recipes.length} of ${result.total} recipes
+          </p>
+
+          ${
+            result.recipes.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">🔨</div>
+              <p>No recipes found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.recipes
+            .map(
+              (recipe) => `
+            <div class="card">
+              <a href="/recipe/${recipe.id}" style="font-size: 1.1em; font-weight: bold;">
+                ${recipe.result_item_name}
+              </a>
+              <div style="margin-top: 8px;">
+                <span class="badge">${recipe.craft_type_name}</span>
+                <span class="badge">Level ${recipe.class_job_level}</span>
+                ${recipe.stars ? `<span class="badge" style="background: #ffd700; color: #000;">${'⭐'.repeat(recipe.stars)}</span>` : ''}
+                ${recipe.can_hq ? '<span class="badge">HQ</span>' : ''}
+                ${recipe.is_specialist ? '<span class="badge" style="background: #9b59b6;">Specialist</span>' : ''}
+              </div>
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('recipeSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/crafting?item=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading recipes');
+  }
+});
+
+// Recipe details page
+app.get('/recipe/:id', (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.id);
+    const recipe = craftingService.getRecipeById(recipeId);
+
+    if (!recipe) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Recipe Not Found - Eorzea Tracker</title>
+          <link rel="stylesheet" href="/style.css">
+        </head>
+        <body>
+          <div class="container">
+            <a href="/crafting" class="back-link">← Back to Crafting</a>
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">🔨</div>
+              <h1>Recipe Not Found</h1>
+              <p>Recipe ID ${recipeId} doesn't exist</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>${recipe.result_item_name} - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/crafting" class="back-link">← Back to Crafting</a>
+          <h1>🔨 ${recipe.result_item_name}</h1>
+
+          <div class="card">
+            <h2>Recipe Info</h2>
+            <div class="info-row">
+              <span class="label">Craft Type</span>
+              <span class="value">${recipe.craft_type_name}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Level</span>
+              <span class="value">${recipe.class_job_level}${recipe.stars ? ` ${'⭐'.repeat(recipe.stars)}` : ''}</span>
+            </div>
+            ${
+              recipe.difficulty
+                ? `
+            <div class="info-row">
+              <span class="label">Difficulty</span>
+              <span class="value">${recipe.difficulty}</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              recipe.durability
+                ? `
+            <div class="info-row">
+              <span class="label">Durability</span>
+              <span class="value">${recipe.durability}</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              recipe.quality
+                ? `
+            <div class="info-row">
+              <span class="label">Quality</span>
+              <span class="value">${recipe.quality}</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              recipe.suggested_craftsmanship
+                ? `
+            <div class="info-row">
+              <span class="label">Craftsmanship</span>
+              <span class="value">${recipe.suggested_craftsmanship}</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              recipe.suggested_control
+                ? `
+            <div class="info-row">
+              <span class="label">Control</span>
+              <span class="value">${recipe.suggested_control}</span>
+            </div>
+            `
+                : ''
+            }
+          </div>
+
+          ${
+            recipe.ingredients && recipe.ingredients.length > 0
+              ? `
+          <div class="card">
+            <h2>Ingredients</h2>
+            ${recipe.ingredients
+              .map(
+                (ingredient) => `
+              <div style="padding: 12px 0; border-bottom: 1px solid #0f3460;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <div style="font-weight: bold;">
+                      <a href="/item/${ingredient.item_id}">${ingredient.item_name}</a>
+                    </div>
+                    ${
+                      ingredient.sources && ingredient.sources.length > 0
+                        ? `
+                      <div style="margin-top: 4px; color: #aaa; font-size: 0.9em;">
+                        ${ingredient.sources.map((s) => s.type).join(', ')}
+                      </div>
+                    `
+                        : ''
+                    }
+                  </div>
+                  <div style="font-size: 1.2em; font-weight: bold; color: #4ecca3;">
+                    x${ingredient.quantity}
+                  </div>
+                </div>
+              </div>
+            `
+              )
+              .join('')}
+          </div>
+          `
+              : ''
+          }
+        </div>
+        <script src="/clock.js"></script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading recipe details');
+  }
+});
+
+// ============================================================================
+// WEB UI ROUTES - Collectibles
+// ============================================================================
+
+// Browse mounts page
+app.get('/mounts', (req, res) => {
+  try {
+    const name = req.query.name as string;
+    const flying = req.query.flying;
+
+    const result = collectiblesService.searchMounts({
+      name,
+      is_flying: flying === 'true' ? true : flying === 'false' ? false : undefined,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Mounts - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>🐴 Mounts</h1>
+
+          <input type="text" class="search" id="mountSearch" placeholder="Search mounts..." value="${name || ''}">
+
+          <div class="quick-links">
+            <a href="/mounts" class="quick-link">All Mounts</a>
+            <a href="/mounts?flying=true" class="quick-link">✈️ Flying</a>
+          </div>
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.mounts.length} of ${result.total} mounts
+          </p>
+
+          ${
+            result.mounts.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">🐴</div>
+              <p>No mounts found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.mounts
+            .map(
+              (mount) => `
+            <div class="card">
+              <div style="font-size: 1.1em; font-weight: bold;">
+                ${mount.singular || mount.name}
+              </div>
+              <div style="margin-top: 8px;">
+                ${mount.is_flying ? '<span class="badge">✈️ Flying</span>' : ''}
+                ${mount.is_aquatic ? '<span class="badge">🌊 Aquatic</span>' : ''}
+                ${mount.is_seats > 1 ? `<span class="badge">👥 ${mount.is_seats} Seats</span>` : ''}
+              </div>
+              ${
+                mount.sources && mount.sources.length > 0
+                  ? `
+                <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
+                  ${mount.sources.map((s) => s.source_type).join(', ')}
+                </div>
+              `
+                  : ''
+              }
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('mountSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/mounts?name=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading mounts');
+  }
+});
+
+// Browse companions page
+app.get('/companions', (req, res) => {
+  try {
+    const name = req.query.name as string;
+
+    const result = collectiblesService.searchCompanions({
+      name,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Companions - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>🐾 Companions (Minions)</h1>
+
+          <input type="text" class="search" id="companionSearch" placeholder="Search companions..." value="${name || ''}">
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.companions.length} of ${result.total} companions
+          </p>
+
+          ${
+            result.companions.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">🐾</div>
+              <p>No companions found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.companions
+            .map(
+              (companion) => `
+            <div class="card">
+              <div style="font-size: 1.1em; font-weight: bold;">
+                ${companion.singular || companion.name}
+              </div>
+              <div style="margin-top: 8px;">
+                ${companion.is_battle ? '<span class="badge">⚔️ Battle</span>' : ''}
+              </div>
+              ${
+                companion.sources && companion.sources.length > 0
+                  ? `
+                <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
+                  ${companion.sources.map((s) => s.source_type).join(', ')}
+                </div>
+              `
+                  : ''
+              }
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('companionSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/companions?name=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading companions');
+  }
+});
+
+// Browse orchestrion page
+app.get('/orchestrion', (req, res) => {
+  try {
+    const name = req.query.name as string;
+
+    const result = collectiblesService.searchOrchestrion({
+      name,
+      limit: 100,
+    });
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Orchestrion - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>🎵 Orchestrion Rolls</h1>
+
+          <input type="text" class="search" id="orchestrionSearch" placeholder="Search orchestrion rolls..." value="${name || ''}">
+
+          <p style="color: #aaa; margin-bottom: 16px;">
+            Showing ${result.orchestrion_rolls.length} of ${result.total} orchestrion rolls
+          </p>
+
+          ${
+            result.orchestrion_rolls.length === 0
+              ? `
+            <div class="empty-state">
+              <div style="font-size: 3em; margin-bottom: 16px;">🎵</div>
+              <p>No orchestrion rolls found</p>
+            </div>
+          `
+              : ''
+          }
+
+          ${result.orchestrion_rolls
+            .map(
+              (roll) => `
+            <div class="card">
+              <div style="font-size: 1.1em; font-weight: bold;">
+                ${roll.name}
+              </div>
+              ${
+                roll.category_name
+                  ? `
+                <div style="margin-top: 4px; color: #aaa; font-size: 0.9em;">
+                  ${roll.category_name}
+                </div>
+              `
+                  : ''
+              }
+              ${
+                roll.sources && roll.sources.length > 0
+                  ? `
+                <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
+                  ${roll.sources.map((s) => s.source_type).join(', ')}
+                </div>
+              `
+                  : ''
+              }
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+        <script src="/clock.js"></script>
+        <script>
+          document.getElementById('orchestrionSearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              window.location = '/orchestrion?name=' + encodeURIComponent(e.target.value);
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading orchestrion rolls');
+  }
+});
+
+// Collection stats page
+app.get('/collection', (req, res) => {
+  try {
+    const characterId = req.query.character_id ? parseInt(req.query.character_id as string) : 1;
+
+    const stats = collectiblesService.getCollectionStats(characterId);
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Collection Stats - Eorzea Tracker</title>
+        <link rel="stylesheet" href="/style.css">
+      </head>
+      <body>
+        <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
+        <div class="container">
+          <a href="/" class="back-link">← Home</a>
+          <h1>📊 Collection Statistics</h1>
+
+          <div class="card">
+            <h2>🐴 Mounts</h2>
+            <div class="info-row">
+              <span class="label">Obtained</span>
+              <span class="value">${stats.mounts.obtained} / ${stats.mounts.total}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Progress</span>
+              <span class="value">${stats.mounts.progress_percentage.toFixed(1)}%</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Flying Mounts</span>
+              <span class="value">${stats.mounts.flying}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Multi-Seat Mounts</span>
+              <span class="value">${stats.mounts.multi_seat}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🐾 Companions</h2>
+            <div class="info-row">
+              <span class="label">Obtained</span>
+              <span class="value">${stats.companions.obtained} / ${stats.companions.total}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Progress</span>
+              <span class="value">${stats.companions.progress_percentage.toFixed(1)}%</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Battle Companions</span>
+              <span class="value">${stats.companions.battle}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>🎵 Orchestrion Rolls</h2>
+            <div class="info-row">
+              <span class="label">Obtained</span>
+              <span class="value">${stats.orchestrion.obtained} / ${stats.orchestrion.total}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Progress</span>
+              <span class="value">${stats.orchestrion.progress_percentage.toFixed(1)}%</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px;">
+            <a href="/mounts" class="quick-link" style="display: block; margin-bottom: 8px;">Browse Mounts</a>
+            <a href="/companions" class="quick-link" style="display: block; margin-bottom: 8px;">Browse Companions</a>
+            <a href="/orchestrion" class="quick-link" style="display: block;">Browse Orchestrion</a>
+          </div>
+        </div>
+        <script src="/clock.js"></script>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send('Error loading collection stats');
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('\n🌐 Eorzea Web Server Started!');
@@ -929,5 +2342,9 @@ process.on('SIGINT', () => {
   console.log('\n\n👋 Shutting down gracefully...');
   fishTracker.close();
   questTracker.close();
+  itemService.close();
+  gatheringService.close();
+  craftingService.close();
+  collectiblesService.close();
   process.exit(0);
 });
