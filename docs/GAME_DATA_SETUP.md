@@ -21,7 +21,7 @@ These CSV files are extracted using [SaintCoinach](https://github.com/xivapi/Sai
 
 ## Required CSV Files
 
-Place these files in `data/game-csv/` directory:
+These files are provided via the `data/ffxiv-datamining` git submodule:
 
 ### Core Item Files
 - `Item.csv` - All items in the game (~50,000+ items)
@@ -55,24 +55,15 @@ Place these files in `data/game-csv/` directory:
 
 ## Quick Setup
 
-### Option 1: Automatic Download (requires internet)
+### Initialize the Git Submodule
+
+The CSV files are provided via a git submodule pointing to [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining):
 
 ```bash
-# Download all required CSV files
-npm run download-csv
+# Initialize the submodule (first time only)
+git submodule update --init --recursive
 
 # Seed the database
-npm run seed-game-data
-```
-
-### Option 2: Manual Download
-
-1. Go to https://github.com/xivapi/ffxiv-datamining/tree/master/csv
-2. Download the required CSV files (listed above)
-3. Place them in `data/game-csv/` directory
-4. Run the seeder:
-
-```bash
 npm run seed-game-data
 ```
 
@@ -200,11 +191,18 @@ Track your collection:
 When a new patch is released:
 
 1. Wait for xivapi/ffxiv-datamining to be updated (usually within 24h)
-2. Re-run the download script or manually update CSV files
-3. Re-run the seeder:
+2. Update the submodule to latest:
 
 ```bash
+# Update the submodule to latest
+git submodule update --remote data/ffxiv-datamining
+
+# Re-run the seeder
 npm run seed-game-data
+
+# Commit the submodule update
+git add data/ffxiv-datamining
+git commit -m "Update game data to latest patch"
 ```
 
 The seeder will:
@@ -267,9 +265,9 @@ GET /api/orchestrion
 ## Troubleshooting
 
 ### "CSV file not found"
-- Ensure CSV files are in `data/game-csv/`
-- Check file names match exactly (case-sensitive on Linux/macOS)
-- Download missing files from the repository
+- Ensure the git submodule is initialized: `git submodule update --init --recursive`
+- Check that `data/ffxiv-datamining/csv/` exists and contains CSV files
+- Try re-initializing the submodule if it's empty
 
 ### "Database locked"
 - Close any other applications accessing the database

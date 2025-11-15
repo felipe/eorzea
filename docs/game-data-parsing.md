@@ -31,7 +31,7 @@ Build a 100% offline quest tracking system by parsing CSV files from the ffxiv-d
 │  scripts/download-game-data.ts                              │
 │    • Downloads CSVs from ffxiv-datamining                   │
 │    • Downloads schema JSONs from SaintCoinach               │
-│    • Stores in: data/game-csv/                              │
+│    • Stores in: data/ffxiv-datamining/csv/                              │
 │    • Stores in: data/game-schemas/                          │
 └─────────────────────────────────────────────────────────────┘
                               ↓
@@ -92,7 +92,7 @@ Download CSV files and schema definitions from GitHub repositories to local file
 
 ```
 data/
-├── game-csv/
+├── ffxiv-datamining/csv/
 │   ├── Quest.csv
 │   ├── ClassJob.csv
 │   ├── PlaceName.csv
@@ -118,13 +118,13 @@ interface DownloadConfig {
 
 async function downloadGameData(config: DownloadConfig): Promise<void> {
   // 1. Create directories if they don't exist
-  //    - data/game-csv/
+  //    - data/ffxiv-datamining/csv/
   //    - data/game-schemas/
 
   // 2. Download each CSV file
   for (const csvFile of config.csvFiles) {
     const url = `${config.csvBaseUrl}/csv/${csvFile}`;
-    const destination = `data/game-csv/${csvFile}`;
+    const destination = `data/ffxiv-datamining/csv/${csvFile}`;
     await downloadFile(url, destination);
   }
 
@@ -329,7 +329,7 @@ class CSVParser {
   }
 
   private loadCSV(sheetName: string): Map<number, string[]> {
-    // Read from data/game-csv/${sheetName}.csv
+    // Read from data/ffxiv-datamining/csv/${sheetName}.csv
     // Return Map of key (first column) to row array
   }
 }
@@ -396,7 +396,7 @@ interface ParsedQuest {
 
 async function parseQuestData(): Promise<void> {
   // 1. Initialize CSV parser
-  const parser = new CSVParser('data/game-schemas', 'data/game-csv');
+  const parser = new CSVParser('data/game-schemas', 'data/ffxiv-datamining/csv');
 
   // 2. Parse Quest sheet
   const quests = parser.parseSheet('Quest');
@@ -992,7 +992,7 @@ describe('CSVParser', () => {
   let parser: CSVParser;
 
   beforeEach(() => {
-    parser = new CSVParser('data/game-schemas', 'data/game-csv');
+    parser = new CSVParser('data/game-schemas', 'data/ffxiv-datamining/csv');
   });
 
   test('should parse simple string column', () => {
@@ -1141,7 +1141,7 @@ eorzea/
 │ ├── game.db # Quest tracking (NEW)
 │ ├── fish-data.json # Fish source data (existing)
 │ ├── quest-data.json # Quest source data (NEW)
-│ ├── game-csv/ # Downloaded CSVs (NEW)
+│ ├── ffxiv-datamining/csv/ # Downloaded CSVs (NEW)
 │ │ ├── Quest.csv
 │ │ ├── ClassJob.csv
 │ │ ├── PlaceName.csv
