@@ -77,6 +77,137 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Dark Theme**: Easy on the eyes
 - **Real-time Updates**: See your progress anywhere
 
+## Architecture: Three Ways to Access Your Data
+
+Eorzea provides three distinct interfaces for accessing game data, each suited for different use cases:
+
+### 1. 🖥️ **CLI (Command Line Interface)**
+
+**Best for:** Power users, automation, scripting
+
+**Features:**
+- Fast, keyboard-driven interface
+- Full access to all game data
+- Character management and progress tracking
+- Quest, fish, item, recipe, gathering, and collectibles commands
+- Perfect for quick lookups and batch operations
+
+**Example:**
+```bash
+eorzea fish --available
+eorzea item search "Darksteel Ore"
+eorzea quest --search "The Ultimate Weapon"
+```
+
+### 2. 🔌 **JSON REST API**
+
+**Best for:** Third-party apps, integrations, automation
+
+**Features:**
+- Complete RESTful API with 30+ endpoints
+- JSON responses for all game data
+- Pagination support (limit/offset)
+- Advanced filtering and search
+- Full OpenAPI 3.0 documentation
+- CORS-enabled for web apps
+
+**Base URL:** `http://localhost:3000/api`
+
+**Available APIs:**
+- **Fish**: `/api/fish`, `/api/fish/available`, `/api/fish/:id`
+- **Quests**: `/api/quests`, `/api/quests/:id`
+- **Items**: `/api/items`, `/api/items/:id`, `/api/items/:id/guide`, `/api/items/:id/sources`, `/api/items/:id/uses`
+- **Gathering**: `/api/gathering/points`, `/api/gathering/available`, `/api/gathering/types`
+- **Crafting**: `/api/recipes`, `/api/recipes/:id`, `/api/recipes/:id/materials`, `/api/craft-types`
+- **Collectibles**: `/api/mounts`, `/api/companions`, `/api/orchestrion`, `/api/collection/stats`
+
+**Example:**
+```bash
+# Get all flying mounts
+curl "http://localhost:3000/api/mounts?is_flying=true"
+
+# Get currently available fish
+curl "http://localhost:3000/api/fish/available"
+
+# Search for items by name
+curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
+```
+
+**Documentation:** See `docs/openapi.yaml` for complete API specification
+
+### 3. 📱 **Web UI (Mobile-Optimized)**
+
+**Best for:** Browsing on phones/tablets, visual exploration
+
+**Features:**
+- Mobile-responsive HTML pages
+- Dark theme optimized for mobile
+- Browse all game data visually
+- Search and filter functionality
+- Real-time Eorzean time display
+- Auto-refresh for time-sensitive data
+
+**URL:** `http://localhost:3000` (or `http://YOUR_IP:3000` from other devices)
+
+**Available Pages:**
+- **Fish**: `/fish`, `/fish/available`, `/fish/:id`
+- **Quests**: `/quests`, `/quest/:id`
+- **Items**: `/items`, `/item/:id`
+- **Gathering**: `/gathering`, `/gathering/:id`
+- **Crafting**: `/crafting`, `/recipe/:id`
+- **Collectibles**: `/mounts`, `/companions`, `/orchestrion`, `/collection`
+
+**How it works:** Both HTML pages and JSON APIs call the same service layer directly (no HTTP calls between them), ensuring a single source of truth and optimal performance.
+
+### Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    USER INTERFACES                        │
+├──────────────┬──────────────────┬────────────────────────┤
+│  CLI         │  JSON REST API   │  Web UI (HTML)         │
+│  (Terminal)  │  (HTTP/JSON)     │  (Browser/Mobile)      │
+└──────┬───────┴────────┬─────────┴──────────┬─────────────┘
+       │                │                    │
+       │                │                    │
+       │                ↓                    ↓
+       │         ┌────────────────────────────────────────┐
+       │         │   Express Route Handlers               │
+       │         │   JSON API       HTML Rendering        │
+       │         │   /api/fish      /fish                 │
+       │         │   /api/quests    /quests               │
+       │         │   /api/items     /items                │
+       │         │   etc...         etc...                │
+       │         └──────────┬────────────────┬────────────┘
+       │                    │                │
+       │                    ↓                ↓
+       │         ┌─────────────────────────────────────────┐
+       │         │         Service Layer                   │
+       │    ┌────┤    (Shared Business Logic)              │
+       │    │    │    - FishTrackerService                 │
+       │    │    │    - QuestTrackerService                │
+       ↓    ↓    │    - ItemService                        │
+       │    │    │    - GatheringService                   │
+       │    │    │    - CraftingService                    │
+       │    │    │    - CollectiblesService                │
+       └────┴────┴───────────────┬─────────────────────────┘
+                                 ↓
+              ┌────────────────────────────────────────────┐
+              │          SQLite Databases                  │
+              │  - game.db (items, quests, etc.)           │
+              │  - fish.db (fish data)                     │
+              │  - profile.db (character progress)         │
+              └────────────────────────────────────────────┘
+```
+
+**Key Design Principles:**
+- ✅ **Single Source of Truth**: All interfaces (CLI, JSON API, HTML) call the same Service Layer
+- ✅ **No Duplicate Logic**: Both JSON and HTML endpoints use identical service calls
+- ✅ **Direct Service Access**: HTML endpoints call services directly (no internal HTTP overhead)
+- ✅ **Separation of Concerns**: Clear boundaries between presentation, API, business logic, and data layers
+- ✅ **Offline-First**: All data stored locally in SQLite
+- ✅ **RESTful Design**: Consistent API patterns across all endpoints
+
 ## Installation
 
 ```bash
