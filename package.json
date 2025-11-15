@@ -18,7 +18,8 @@
     "seed-fish-db": "tsx scripts/seed-fish-db.ts",
     "parse-quest-data": "tsx scripts/parse-quest-data.ts",
     "seed-quest-db": "tsx scripts/seed-quest-db.ts",
-    "seed-game-data": "tsx scripts/seed-game-data.ts"
+    "seed-game-data": "tsx scripts/seed-game-data.ts",
+    "_comment": "Note: 'parse-quest-data' extracts quest objectives from CSVs. Run before 'seed-quest-db' if you need quest data. 'seed-game-data' handles all data types including quests."
   },
   "keywords": [
     "ffxiv",

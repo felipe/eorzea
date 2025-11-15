@@ -5,6 +5,7 @@ This guide explains how to obtain and seed FFXIV game data for the gathering, cr
 ## Overview
 
 The Eorzea application uses CSV files from the official FFXIV game data to populate:
+
 - **Items** (weapons, armor, materials, consumables, etc.)
 - **Recipes** (crafting recipes for all Disciple of the Hand classes)
 - **Gathering Nodes** (Mining, Botany, Spearfishing points)
@@ -24,16 +25,19 @@ These CSV files are extracted using [SaintCoinach](https://github.com/xivapi/Sai
 These files are provided via the `data/ffxiv-datamining` git submodule:
 
 ### Core Item Files
+
 - `Item.csv` - All items in the game (~50,000+ items)
 - `ItemUICategory.csv` - UI categories for items
 - `ItemSearchCategory.csv` - Search categories
 
 ### Crafting & Recipes
+
 - `Recipe.csv` - All crafting recipes (~10,000+ recipes)
 - `RecipeLevelTable.csv` - Recipe difficulty and requirements
 - `CraftType.csv` - Crafting classes (Carpenter, Blacksmith, etc.)
 
 ### Gathering
+
 - `GatheringPoint.csv` - Node locations
 - `GatheringPointBase.csv` - Node types and levels
 - `GatheringItem.csv` - Items available at nodes
@@ -41,12 +45,14 @@ These files are provided via the `data/ffxiv-datamining` git submodule:
 - `GatheringType.csv` - Gathering classes (Mining, Botany, etc.)
 
 ### Collectibles
+
 - `Mount.csv` - All mounts in the game (400+ mounts)
 - `Companion.csv` - All minions/companions (700+ minions)
 - `Orchestrion.csv` - All orchestrion rolls (400+ songs)
 - `OrchestrionCategory.csv` - Music categories
 
 ### Reference Data
+
 - `ClassJob.csv` - All classes and jobs
 - `PlaceName.csv` - Location names
 - `TerritoryType.csv` - Zone/territory data
@@ -67,7 +73,7 @@ git submodule update --init --recursive
 npm run seed-game-data
 ```
 
-### Option 3: Selective Seeding
+### Selective Seeding
 
 You can skip certain data types if you don't need them:
 
@@ -93,6 +99,7 @@ The seeder will automatically create/update the following database:
 ### Key Tables
 
 #### Items
+
 - `items` - All game items
 - `item_ui_categories` - UI categories
 - `item_search_categories` - Search categories
@@ -100,12 +107,14 @@ The seeder will automatically create/update the following database:
 - `item_uses` - What items are used for
 
 #### Crafting
+
 - `recipes` - All crafting recipes
 - `recipe_ingredients` - Recipe materials
 - `recipe_level_tables` - Crafting requirements
 - `craft_types` - Crafting classes
 
 #### Gathering
+
 - `gathering_points` - Node locations
 - `gathering_point_base` - Node types
 - `gathering_items` - Gatherable items
@@ -113,6 +122,7 @@ The seeder will automatically create/update the following database:
 - `gathering_types` - Gathering classes
 
 #### Collectibles
+
 - `mounts` - All mounts
 - `companions` - All minions
 - `orchestrion_rolls` - All music
@@ -120,6 +130,7 @@ The seeder will automatically create/update the following database:
 - `collectible_sources` - How to obtain collectibles
 
 #### Reference
+
 - `class_jobs` - All classes/jobs
 - `place_names` - Location names
 - `territory_types` - Zones/territories
@@ -130,6 +141,7 @@ The seeder will automatically create/update the following database:
 Once seeded, you can search for any item and see:
 
 ### Item Sources
+
 - **Crafting**: Which recipes produce this item
 - **Gathering**: Which nodes have this item
 - **Quests**: Which quests reward this item
@@ -138,6 +150,7 @@ Once seeded, you can search for any item and see:
 - **Duties**: Which dungeons/trials/raids drop this item
 
 ### Item Uses
+
 - **Recipe Ingredient**: Which recipes require this item
 - **Quest Required**: Which quests need this item
 - **Leves**: Which levequest use this item
@@ -169,18 +182,21 @@ Complete crafting guide:
 Track your collection:
 
 ### Mounts
+
 - **400+ mounts** from all expansions
 - Source information (quest, achievement, shop, etc.)
 - Flying capable, multi-seat indicators
 - Progress tracking per character
 
 ### Minions/Companions
+
 - **700+ minions** to collect
 - Source information
 - Battle minions indicator
 - Collection completion tracking
 
 ### Orchestrion Rolls
+
 - **400+ songs** organized by category
 - Source information
 - Category browsing
@@ -206,6 +222,7 @@ git commit -m "Update game data to latest patch"
 ```
 
 The seeder will:
+
 - Clear old data
 - Import new/updated data
 - Preserve your player progress (in profile.db)
@@ -224,6 +241,7 @@ The seeder will:
 All features are accessible via:
 
 ### CLI Commands
+
 ```bash
 # Item lookup
 eorzea item search "Darksteel Ore"
@@ -244,6 +262,7 @@ eorzea orchestrion search "Answers"
 ```
 
 ### Web API
+
 ```http
 GET /api/items?name=Darksteel
 GET /api/items/5115
@@ -265,21 +284,25 @@ GET /api/orchestrion
 ## Troubleshooting
 
 ### "CSV file not found"
+
 - Ensure the git submodule is initialized: `git submodule update --init --recursive`
 - Check that `data/ffxiv-datamining/csv/` exists and contains CSV files
 - Try re-initializing the submodule if it's empty
 
 ### "Database locked"
+
 - Close any other applications accessing the database
 - Kill any background processes
 - Delete `data/game.db-wal` and `data/game.db-shm` files
 
 ### "Out of memory"
+
 - The seeder processes large CSV files
 - Ensure you have at least 2GB RAM available
 - Try seeding one section at a time with `--skip-*` flags
 
 ### "Foreign key constraint failed"
+
 - This usually means CSV files are from different patches
 - Download all CSV files from the same patch/commit
 - Run the seeder with all data types at once (don't skip reference data)
@@ -301,6 +324,7 @@ The CSV data comes from the official game client and is used under fair use for 
 ## Support
 
 For issues or questions:
+
 - Check the [main README](../README.md)
 - Open an issue on GitHub
 - Join the community Discord
