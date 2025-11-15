@@ -40,9 +40,9 @@ const gatheringService = new GatheringService();
 const craftingService = new CraftingService();
 const collectiblesService = new CollectiblesService();
 
-// Swagger UI for API documentation at /docs
+// Swagger UI for API documentation at /openapi
 app.use(
-  '/docs',
+  '/openapi',
   swaggerUi.serve,
   swaggerUi.setup(openapiSpec, {
     customSiteTitle: 'Eorzea API Documentation',
