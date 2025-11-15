@@ -54,6 +54,7 @@ coverage/
 
 # Local data
 data/
+!data/ffxiv-datamining/
 *.db
 *.sqlite
 *.sqlite3

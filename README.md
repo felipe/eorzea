@@ -211,9 +211,14 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 ## Installation
 
 ```bash
-# Clone and install
+# Clone the repository
 git clone https://github.com/felipe/eorzea.git
 cd eorzea
+
+# Initialize git submodules (required for game data CSVs)
+git submodule update --init --recursive
+
+# Install dependencies
 yarn install
 
 # Link the CLI globally (makes 'eorzea' command available)
@@ -379,18 +384,31 @@ DEFAULT_SERVER=YourServer
 
 ## Data Setup
 
-Before using the new features, you need to download and seed game data:
+The game data CSVs are provided via a git submodule (xivapi/ffxiv-datamining). After cloning and initializing the submodule, seed the databases:
 
 ```bash
-# Download CSV files from ffxiv-datamining (requires internet)
-npm run download-csv
-
 # Seed all game data (items, recipes, gathering, collectibles)
 npm run seed-game-data
 
 # Or seed selectively
 npm run seed-game-data -- --skip-gathering
 npm run seed-game-data -- --skip-collectibles
+```
+
+### Updating Game Data
+
+When new patches are released, update the submodule to get the latest CSV data:
+
+```bash
+# Update the ffxiv-datamining submodule to latest
+git submodule update --remote data/ffxiv-datamining
+
+# Re-seed the database with new data
+npm run seed-game-data
+
+# Commit the submodule update
+git add data/ffxiv-datamining
+git commit -m "Update game data to latest patch"
 ```
 
 See [`docs/GAME_DATA_SETUP.md`](docs/GAME_DATA_SETUP.md) for detailed setup instructions.
@@ -410,13 +428,13 @@ yarn lint
 # Format code
 yarn format
 
-# Update fish data
+# Update fish data (from Carbuncle Plushy)
 yarn update-fish-data
 
-# Update quest data
-yarn update-quest-data
+# Parse quest data from CSVs
+yarn parse-quest-data
 
-# Seed game data
+# Seed game data from CSVs
 yarn seed-game-data
 ```
 

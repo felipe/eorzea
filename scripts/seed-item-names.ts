@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DATA_DIR = join(__dirname, '..', 'data');
-const CSV_DIR = join(DATA_DIR, 'game-csv');
+const CSV_DIR = join(DATA_DIR, 'ffxiv-datamining', 'csv');
 const DB_FILE = join(DATA_DIR, 'fish.db');
 const ITEM_CSV = join(CSV_DIR, 'Item.csv');
 

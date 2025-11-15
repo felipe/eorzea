@@ -1,0 +1,3 @@
+[submodule "data/ffxiv-datamining"]
+	path = data/ffxiv-datamining
+	url = https://github.com/xivapi/ffxiv-datamining.git

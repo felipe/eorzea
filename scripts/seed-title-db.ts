@@ -9,7 +9,7 @@ import { parse } from 'csv-parse/sync';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const CSV_PATH = join(process.cwd(), 'data', 'game-csv', 'Title.csv');
+const CSV_PATH = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv', 'Title.csv');
 const DB_PATH = join(process.cwd(), 'data', 'game.db');
 
 interface TitleRow {

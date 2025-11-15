@@ -16,9 +16,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "update-fish-data": "./scripts/update-fish-data.sh",
     "seed-fish-db": "tsx scripts/seed-fish-db.ts",
-    "update-quest-data": "tsx scripts/download-quest-data.ts && tsx scripts/parse-quest-data.ts && tsx scripts/seed-quest-db.ts",
+    "parse-quest-data": "tsx scripts/parse-quest-data.ts",
     "seed-quest-db": "tsx scripts/seed-quest-db.ts",
-    "download-csv": "tsx scripts/download-game-csv.ts",
     "seed-game-data": "tsx scripts/seed-game-data.ts"
   },
   "keywords": [
