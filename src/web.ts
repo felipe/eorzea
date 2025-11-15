@@ -4,6 +4,11 @@
  */
 
 import express from 'express';
+import swaggerUi from 'swagger-ui-express';
+import yaml from 'js-yaml';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { FishTrackerService } from './services/fishTracker.js';
 import { QuestTrackerService } from './services/questTracker.js';
 import { ItemService } from './services/itemService.js';
@@ -18,8 +23,15 @@ import {
 } from './utils/eorzeanTime.js';
 import { getPreviousWeatherPeriodStart, calculateWeather } from './utils/weatherForecast.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Load OpenAPI spec
+const openapiPath = path.join(__dirname, '..', 'docs', 'openapi.yaml');
+const openapiSpec = yaml.load(fs.readFileSync(openapiPath, 'utf8')) as any;
 
 const fishTracker = new FishTrackerService();
 const questTracker = new QuestTrackerService();
@@ -27,6 +39,27 @@ const itemService = new ItemService();
 const gatheringService = new GatheringService();
 const craftingService = new CraftingService();
 const collectiblesService = new CollectiblesService();
+
+// Swagger UI for API documentation
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(openapiSpec, {
+    customSiteTitle: 'Eorzea API Documentation',
+    customCss: '.swagger-ui .topbar { display: none }',
+  })
+);
+
+// Serve OpenAPI spec as JSON
+app.get('/openapi.json', (_req, res) => {
+  res.json(openapiSpec);
+});
+
+// Serve OpenAPI spec as YAML
+app.get('/openapi.yaml', (_req, res) => {
+  res.type('text/yaml');
+  res.send(fs.readFileSync(openapiPath, 'utf8'));
+});
 
 // Serve static CSS
 app.get('/style.css', (_req, res) => {
@@ -489,50 +522,50 @@ app.get('/fish/:id', (req, res) => {
     const fish = fishTracker.getFishById(fishId);
     const quests = questTracker.getQuestsRequiringFish(fishId);
 
-  // Calculate availability (considering time AND weather)
-  const now = new Date();
-  const et = getEorzeanTime(now);
+    // Calculate availability (considering time AND weather)
+    const now = new Date();
+    const et = getEorzeanTime(now);
 
-  // Check if time window matches
-  const timeMatches = isInTimeWindow(et.hours, fish?.startHour || 0, fish?.endHour || 0);
+    // Check if time window matches
+    const timeMatches = isInTimeWindow(et.hours, fish?.startHour || 0, fish?.endHour || 0);
 
-  // Check if weather matches (if fish has weather requirements)
-  let weatherMatches = true;
-  let currentWeather: number | null = null;
-  let previousWeather: number | null = null;
+    // Check if weather matches (if fish has weather requirements)
+    let weatherMatches = true;
+    let currentWeather: number | null = null;
+    let previousWeather: number | null = null;
 
-  if (fish && (fish.weatherSet.length > 0 || fish.previousWeatherSet.length > 0)) {
-    currentWeather = fishTracker.getCurrentWeather(fish);
+    if (fish && (fish.weatherSet.length > 0 || fish.previousWeatherSet.length > 0)) {
+      currentWeather = fishTracker.getCurrentWeather(fish);
 
-    // Check current weather requirement
-    if (fish.weatherSet.length > 0 && currentWeather !== null) {
-      weatherMatches = fish.weatherSet.includes(currentWeather);
-    }
+      // Check current weather requirement
+      if (fish.weatherSet.length > 0 && currentWeather !== null) {
+        weatherMatches = fish.weatherSet.includes(currentWeather);
+      }
 
-    // Check previous weather requirement
-    if (weatherMatches && fish.previousWeatherSet.length > 0 && fish.location) {
-      const weatherRates = fishTracker.getWeatherRatesForSpot(fish.location);
-      if (weatherRates) {
-        const prevPeriodStart = getPreviousWeatherPeriodStart(now);
-        previousWeather = calculateWeather(prevPeriodStart, weatherRates);
-        if (previousWeather !== null) {
-          weatherMatches = weatherMatches && fish.previousWeatherSet.includes(previousWeather);
-        } else {
-          weatherMatches = false;
+      // Check previous weather requirement
+      if (weatherMatches && fish.previousWeatherSet.length > 0 && fish.location) {
+        const weatherRates = fishTracker.getWeatherRatesForSpot(fish.location);
+        if (weatherRates) {
+          const prevPeriodStart = getPreviousWeatherPeriodStart(now);
+          previousWeather = calculateWeather(prevPeriodStart, weatherRates);
+          if (previousWeather !== null) {
+            weatherMatches = weatherMatches && fish.previousWeatherSet.includes(previousWeather);
+          } else {
+            weatherMatches = false;
+          }
         }
       }
     }
-  }
 
-  const isAvailable = timeMatches && weatherMatches;
+    const isAvailable = timeMatches && weatherMatches;
 
-  // Get next available time (considering weather)
-  const nextStart = fish ? fishTracker.getNextAvailableWindow(fish, now) : null;
-  const currentEnd =
-    fish && isAvailable ? getCurrentWindowEnd(fish.startHour, fish.endHour, now) : null;
+    // Get next available time (considering weather)
+    const nextStart = fish ? fishTracker.getNextAvailableWindow(fish, now) : null;
+    const currentEnd =
+      fish && isAvailable ? getCurrentWindowEnd(fish.startHour, fish.endHour, now) : null;
 
-  if (!fish) {
-    return res.status(404).send(`
+    if (!fish) {
+      return res.status(404).send(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -553,9 +586,9 @@ app.get('/fish/:id', (req, res) => {
       </body>
       </html>
     `);
-  }
+    }
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -830,7 +863,7 @@ app.get('/quest/:id', (req, res) => {
     const quest = questTracker.getQuestById(questId);
 
     if (!quest) {
-    return res.status(404).send(`
+      return res.status(404).send(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -851,11 +884,11 @@ app.get('/quest/:id', (req, res) => {
       </body>
       </html>
     `);
-  }
+    }
 
-  const et = getEorzeanTime(new Date());
+    const et = getEorzeanTime(new Date());
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -1281,7 +1314,12 @@ app.get('/api/quests', (req, res) => {
       minLevel: req.query.minLevel ? parseInt(req.query.minLevel as string) : undefined,
       maxLevel: req.query.maxLevel ? parseInt(req.query.maxLevel as string) : undefined,
       expansionId: req.query.expansionId ? parseInt(req.query.expansionId as string) : undefined,
-      isRepeatable: req.query.isRepeatable === 'true' ? true : req.query.isRepeatable === 'false' ? false : undefined,
+      isRepeatable:
+        req.query.isRepeatable === 'true'
+          ? true
+          : req.query.isRepeatable === 'false'
+            ? false
+            : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
     };
@@ -2106,8 +2144,14 @@ app.get('/api/mounts', (req, res) => {
   try {
     const options = {
       name: req.query.name as string,
-      is_flying: req.query.is_flying === 'true' ? true : req.query.is_flying === 'false' ? false : undefined,
-      is_aquatic: req.query.is_aquatic === 'true' ? true : req.query.is_aquatic === 'false' ? false : undefined,
+      is_flying:
+        req.query.is_flying === 'true' ? true : req.query.is_flying === 'false' ? false : undefined,
+      is_aquatic:
+        req.query.is_aquatic === 'true'
+          ? true
+          : req.query.is_aquatic === 'false'
+            ? false
+            : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
     };
@@ -2213,7 +2257,8 @@ app.get('/api/companions', (req, res) => {
   try {
     const options = {
       name: req.query.name as string,
-      is_battle: req.query.is_battle === 'true' ? true : req.query.is_battle === 'false' ? false : undefined,
+      is_battle:
+        req.query.is_battle === 'true' ? true : req.query.is_battle === 'false' ? false : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
     };
@@ -2424,7 +2469,9 @@ app.get('/api/orchestrion/:id', (req, res) => {
  */
 app.get('/api/collection/stats', (req, res) => {
   try {
-    const characterId = req.query.character_id ? parseInt(req.query.character_id as string) : undefined;
+    const characterId = req.query.character_id
+      ? parseInt(req.query.character_id as string)
+      : undefined;
 
     if (!characterId) {
       return res.status(400).json({ error: 'character_id parameter is required' });
