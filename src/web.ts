@@ -28,20 +28,6 @@ const gatheringService = new GatheringService();
 const craftingService = new CraftingService();
 const collectiblesService = new CollectiblesService();
 
-/**
- * Helper function to make internal API calls
- * @param path - API path (e.g., '/api/fish')
- * @returns Promise with the JSON response
- */
-async function fetchInternalAPI(path: string): Promise<any> {
-  const baseUrl = `http://localhost:${PORT}`;
-  const response = await fetch(`${baseUrl}${path}`);
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
-  }
-  return response.json();
-}
-
 // Serve static CSS
 app.get('/style.css', (_req, res) => {
   res.type('text/css');
@@ -343,20 +329,22 @@ app.get('/', (_req, res) => {
 });
 
 // Fish List
-app.get('/fish', async (req, res) => {
+app.get('/fish', (req, res) => {
   try {
     const bigOnly = req.query.big === '1';
     const folkloreOnly = req.query.folklore === '1';
     const patch = req.query.patch;
 
-    // Build API query string
-    const params = new URLSearchParams();
-    if (bigOnly) params.append('big', '1');
-    if (folkloreOnly) params.append('folklore', '1');
-    if (patch) params.append('patch', patch as string);
-    params.append('limit', '100');
+    // Call service directly (same as JSON API)
+    const options: any = {
+      bigFishOnly: bigOnly,
+      requiresFolklore: folkloreOnly,
+      patch: patch ? parseFloat(patch as string) : undefined,
+      limit: 100,
+      offset: 0,
+    };
 
-    const fish = await fetchInternalAPI(`/api/fish?${params.toString()}`);
+    const fish = fishTracker.searchFish(options);
     const et = getEorzeanTime(new Date());
 
     res.send(`
@@ -423,11 +411,12 @@ app.get('/fish', async (req, res) => {
 });
 
 // Available Fish
-app.get('/fish/available', async (_req, res) => {
+app.get('/fish/available', (_req, res) => {
   try {
-    const data = await fetchInternalAPI('/api/fish/available');
-    const fish = data.availableFish;
-    const et = data.eorzeanTime;
+    // Call service directly (same as JSON API)
+    const now = new Date();
+    const et = getEorzeanTime(now);
+    const fish = fishTracker.getAvailableFish(now);
 
     res.send(`
     <!DOCTYPE html>
@@ -493,10 +482,11 @@ app.get('/fish/available', async (_req, res) => {
 });
 
 // Fish Detail
-app.get('/fish/:id', async (req, res) => {
+app.get('/fish/:id', (req, res) => {
   try {
     const fishId = parseInt(req.params.id);
-    const fish = await fetchInternalAPI(`/api/fish/${fishId}`).catch(() => null);
+    // Call service directly (same as JSON API)
+    const fish = fishTracker.getFishById(fishId);
     const quests = questTracker.getQuestsRequiringFish(fishId);
 
   // Calculate availability (considering time AND weather)
@@ -749,21 +739,21 @@ app.get('/fish/:id', async (req, res) => {
 });
 
 // Quest List
-app.get('/quests', async (req, res) => {
+app.get('/quests', (req, res) => {
   try {
     const search = req.query.search as string;
     const level = req.query.level ? parseInt(req.query.level as string) : undefined;
 
-    // Build API query string
-    const params = new URLSearchParams();
-    if (search) params.append('name', search);
-    if (level) {
-      params.append('minLevel', String(level - 2));
-      params.append('maxLevel', String(level + 2));
-    }
-    params.append('limit', '100');
+    // Call service directly (same as JSON API)
+    const options: any = {
+      name: search,
+      minLevel: level ? level - 2 : undefined,
+      maxLevel: level ? level + 2 : undefined,
+      limit: 100,
+      offset: 0,
+    };
 
-    const quests = await fetchInternalAPI(`/api/quests?${params.toString()}`);
+    const quests = questTracker.searchQuests(options);
     const et = getEorzeanTime(new Date());
 
     res.send(`
@@ -833,10 +823,11 @@ app.get('/quests', async (req, res) => {
 });
 
 // Quest Detail
-app.get('/quest/:id', async (req, res) => {
+app.get('/quest/:id', (req, res) => {
   try {
     const questId = parseInt(req.params.id);
-    const quest = await fetchInternalAPI(`/api/quests/${questId}`).catch(() => null);
+    // Call service directly (same as JSON API)
+    const quest = questTracker.getQuestById(questId);
 
     if (!quest) {
     return res.status(404).send(`

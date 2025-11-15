@@ -157,54 +157,54 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 - **Crafting**: `/crafting`, `/recipe/:id`
 - **Collectibles**: `/mounts`, `/companions`, `/orchestrion`, `/collection`
 
-**How it works:** All HTML pages internally call the JSON APIs to fetch data, ensuring a single source of truth.
+**How it works:** Both HTML pages and JSON APIs call the same service layer directly (no HTTP calls between them), ensuring a single source of truth and optimal performance.
 
 ### Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     USER INTERFACES                       │
-├──────────────┬──────────────────┬───────────────────────┤
-│  CLI         │  JSON REST API   │  Web UI (HTML)        │
-│  (Terminal)  │  (HTTP/JSON)     │  (Browser/Mobile)     │
-└──────┬───────┴────────┬─────────┴──────────┬────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    USER INTERFACES                        │
+├──────────────┬──────────────────┬────────────────────────┤
+│  CLI         │  JSON REST API   │  Web UI (HTML)         │
+│  (Terminal)  │  (HTTP/JSON)     │  (Browser/Mobile)      │
+└──────┬───────┴────────┬─────────┴──────────┬─────────────┘
        │                │                    │
-       │                │                    │ (calls internally)
+       │                │                    │
        │                ↓                    ↓
-       │         ┌──────────────────────────────┐
-       │         │   JSON API Layer             │
-       │         │   - /api/fish                │
-       │         │   - /api/quests              │
-       │         │   - /api/items               │
-       │         │   - /api/gathering           │
-       │         │   - /api/recipes             │
-       │         │   - /api/collectibles        │
-       │         └──────────┬───────────────────┘
-       │                    │
-       ↓                    ↓
-┌──────────────────────────────────────┐
-│      Service Layer                   │
-│  (Business Logic & Data Access)      │
-│  - FishTrackerService                │
-│  - QuestTrackerService               │
-│  - ItemService                       │
-│  - GatheringService                  │
-│  - CraftingService                   │
-│  - CollectiblesService               │
-└──────────────┬───────────────────────┘
-               ↓
-┌──────────────────────────────────────┐
-│        SQLite Databases              │
-│  - game.db (items, quests, etc.)     │
-│  - fish.db (fish data)               │
-│  - profile.db (character progress)   │
-└──────────────────────────────────────┘
+       │         ┌────────────────────────────────────────┐
+       │         │   Express Route Handlers               │
+       │         │   JSON API       HTML Rendering        │
+       │         │   /api/fish      /fish                 │
+       │         │   /api/quests    /quests               │
+       │         │   /api/items     /items                │
+       │         │   etc...         etc...                │
+       │         └──────────┬────────────────┬────────────┘
+       │                    │                │
+       │                    ↓                ↓
+       │         ┌─────────────────────────────────────────┐
+       │         │         Service Layer                   │
+       │    ┌────┤    (Shared Business Logic)              │
+       │    │    │    - FishTrackerService                 │
+       │    │    │    - QuestTrackerService                │
+       ↓    ↓    │    - ItemService                        │
+       │    │    │    - GatheringService                   │
+       │    │    │    - CraftingService                    │
+       │    │    │    - CollectiblesService                │
+       └────┴────┴───────────────┬─────────────────────────┘
+                                 ↓
+              ┌────────────────────────────────────────────┐
+              │          SQLite Databases                  │
+              │  - game.db (items, quests, etc.)           │
+              │  - fish.db (fish data)                     │
+              │  - profile.db (character progress)         │
+              └────────────────────────────────────────────┘
 ```
 
 **Key Design Principles:**
-- ✅ **Single Source of Truth**: All data flows through the Service Layer
-- ✅ **API-First**: HTML UI consumes JSON APIs (no duplicate logic)
-- ✅ **Separation of Concerns**: Clear boundaries between presentation, API, and data layers
+- ✅ **Single Source of Truth**: All interfaces (CLI, JSON API, HTML) call the same Service Layer
+- ✅ **No Duplicate Logic**: Both JSON and HTML endpoints use identical service calls
+- ✅ **Direct Service Access**: HTML endpoints call services directly (no internal HTTP overhead)
+- ✅ **Separation of Concerns**: Clear boundaries between presentation, API, business logic, and data layers
 - ✅ **Offline-First**: All data stored locally in SQLite
 - ✅ **RESTful Design**: Consistent API patterns across all endpoints
 
