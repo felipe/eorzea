@@ -343,21 +343,23 @@ app.get('/', (_req, res) => {
 });
 
 // Fish List
-app.get('/fish', (req, res) => {
-  const bigOnly = req.query.big === '1';
-  const folkloreOnly = req.query.folklore === '1';
-  const patch = req.query.patch ? parseFloat(req.query.patch as string) : undefined;
+app.get('/fish', async (req, res) => {
+  try {
+    const bigOnly = req.query.big === '1';
+    const folkloreOnly = req.query.folklore === '1';
+    const patch = req.query.patch;
 
-  const fish = fishTracker.searchFish({
-    bigFishOnly: bigOnly,
-    requiresFolklore: folkloreOnly,
-    patch: patch,
-    limit: 100,
-  });
+    // Build API query string
+    const params = new URLSearchParams();
+    if (bigOnly) params.append('big', '1');
+    if (folkloreOnly) params.append('folklore', '1');
+    if (patch) params.append('patch', patch as string);
+    params.append('limit', '100');
 
-  const et = getEorzeanTime(new Date());
+    const fish = await fetchInternalAPI(`/api/fish?${params.toString()}`);
+    const et = getEorzeanTime(new Date());
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -413,15 +415,21 @@ app.get('/fish', (req, res) => {
     </body>
     </html>
   `);
+  } catch (error) {
+    res.status(500).send(`
+      <html><body><h1>Error loading fish data</h1><p>${String(error)}</p></body></html>
+    `);
+  }
 });
 
 // Available Fish
-app.get('/fish/available', (_req, res) => {
-  const now = new Date();
-  const fish = fishTracker.getAvailableFish(now);
-  const et = getEorzeanTime(now);
+app.get('/fish/available', async (_req, res) => {
+  try {
+    const data = await fetchInternalAPI('/api/fish/available');
+    const fish = data.availableFish;
+    const et = data.eorzeanTime;
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -477,13 +485,19 @@ app.get('/fish/available', (_req, res) => {
     </body>
     </html>
   `);
+  } catch (error) {
+    res.status(500).send(`
+      <html><body><h1>Error loading available fish</h1><p>${String(error)}</p></body></html>
+    `);
+  }
 });
 
 // Fish Detail
-app.get('/fish/:id', (req, res) => {
-  const fishId = parseInt(req.params.id);
-  const fish = fishTracker.getFishById(fishId);
-  const quests = questTracker.getQuestsRequiringFish(fishId);
+app.get('/fish/:id', async (req, res) => {
+  try {
+    const fishId = parseInt(req.params.id);
+    const fish = await fetchInternalAPI(`/api/fish/${fishId}`).catch(() => null);
+    const quests = questTracker.getQuestsRequiringFish(fishId);
 
   // Calculate availability (considering time AND weather)
   const now = new Date();
@@ -727,25 +741,32 @@ app.get('/fish/:id', (req, res) => {
      </body>
      </html>
    `);
+  } catch (error) {
+    res.status(500).send(`
+      <html><body><h1>Error loading fish details</h1><p>${String(error)}</p></body></html>
+    `);
+  }
 });
 
 // Quest List
-app.get('/quests', (req, res) => {
-  const search = req.query.search as string;
-  const level = req.query.level ? parseInt(req.query.level as string) : undefined;
+app.get('/quests', async (req, res) => {
+  try {
+    const search = req.query.search as string;
+    const level = req.query.level ? parseInt(req.query.level as string) : undefined;
 
-  let quests;
-  if (search) {
-    quests = questTracker.searchByName(search, 100);
-  } else if (level) {
-    quests = questTracker.getQuestsByLevelRange(level - 2, level + 2);
-  } else {
-    quests = questTracker.searchQuests({ limit: 100 });
-  }
+    // Build API query string
+    const params = new URLSearchParams();
+    if (search) params.append('name', search);
+    if (level) {
+      params.append('minLevel', String(level - 2));
+      params.append('maxLevel', String(level + 2));
+    }
+    params.append('limit', '100');
 
-  const et = getEorzeanTime(new Date());
+    const quests = await fetchInternalAPI(`/api/quests?${params.toString()}`);
+    const et = getEorzeanTime(new Date());
 
-  res.send(`
+    res.send(`
     <!DOCTYPE html>
     <html>
     <head>
@@ -804,14 +825,20 @@ app.get('/quests', (req, res) => {
     </body>
     </html>
   `);
+  } catch (error) {
+    res.status(500).send(`
+      <html><body><h1>Error loading quests</h1><p>${String(error)}</p></body></html>
+    `);
+  }
 });
 
 // Quest Detail
-app.get('/quest/:id', (req, res) => {
-  const questId = parseInt(req.params.id);
-  const quest = questTracker.getQuestById(questId);
+app.get('/quest/:id', async (req, res) => {
+  try {
+    const questId = parseInt(req.params.id);
+    const quest = await fetchInternalAPI(`/api/quests/${questId}`).catch(() => null);
 
-  if (!quest) {
+    if (!quest) {
     return res.status(404).send(`
       <!DOCTYPE html>
       <html>
@@ -992,6 +1019,11 @@ app.get('/quest/:id', (req, res) => {
     </body>
     </html>
   `);
+  } catch (error) {
+    res.status(500).send(`
+      <html><body><h1>Error loading quest details</h1><p>${String(error)}</p></body></html>
+    `);
+  }
 });
 
 // ============================================================================
@@ -1060,8 +1092,8 @@ app.get('/quest/:id', (req, res) => {
 app.get('/api/fish', (req, res) => {
   try {
     const options: any = {
-      bigFish: req.query.big === '1' || req.query.big === 'true',
-      folklore: req.query.folklore === '1' || req.query.folklore === 'true',
+      bigFishOnly: req.query.big === '1' || req.query.big === 'true',
+      requiresFolklore: req.query.folklore === '1' || req.query.folklore === 'true',
       patch: req.query.patch ? parseFloat(req.query.patch as string) : undefined,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
       offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
