@@ -1,0 +1,423 @@
+openapi: 3.0.3
+info:
+  title: Eorzea Game Data API
+  description: |
+    Comprehensive REST API for Final Fantasy XIV game data including fish tracking, quests, items,
+    crafting, gathering, and collectibles. This API provides both read-only access to game data
+    and real-time availability information based on Eorzean time.
+  version: 0.1.0
+  contact:
+    name: API Support
+    url: https://github.com/felipe/eorzea
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: http://YOUR_IP:3000
+    description: Network server (replace YOUR_IP with your actual IP address)
+
+tags:
+  - name: Fish
+    description: Fish tracking and availability
+  - name: Quests
+    description: Quest information and search
+  - name: Items
+    description: Item database and lookup
+  - name: Gathering
+    description: Gathering points and nodes
+  - name: Crafting
+    description: Recipes and crafting information
+  - name: Collectibles
+    description: Mounts, minions, and orchestrion rolls
+
+paths:
+  /api/fish:
+    get:
+      summary: Search and filter fish
+      description: Returns a paginated list of fish with optional filters for big fish, folklore, and patch
+      tags:
+        - Fish
+      parameters:
+        - in: query
+          name: big
+          schema:
+            type: string
+            enum: ['1', 'true']
+          description: Filter for big fish only
+        - in: query
+          name: folklore
+          schema:
+            type: string
+            enum: ['1', 'true']
+          description: Filter for folklore fish only
+        - in: query
+          name: patch
+          schema:
+            type: number
+          description: Filter by patch number (e.g., 6.0, 6.5)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results to return
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Number of results to skip for pagination
+      responses:
+        '200':
+          description: List of fish matching the criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Fish'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/fish/available:
+    get:
+      summary: Get currently available fish
+      description: Returns fish that are available to catch at the current Eorzean time
+      tags:
+        - Fish
+      responses:
+        '200':
+          description: List of currently available fish
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eorzeanTime:
+                    type: object
+                    properties:
+                      hours:
+                        type: integer
+                      minutes:
+                        type: integer
+                  availableFish:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Fish'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/fish/{id}:
+    get:
+      summary: Get fish by ID
+      description: Returns detailed information about a specific fish
+      tags:
+        - Fish
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Fish ID
+      responses:
+        '200':
+          description: Fish details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fish'
+        '404':
+          description: Fish not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/quests:
+    get:
+      summary: Search quests
+      description: Search and filter quests by name, level, expansion, and other criteria
+      tags:
+        - Quests
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Search by quest name (partial match)
+        - in: query
+          name: level
+          schema:
+            type: integer
+          description: Filter by exact level
+        - in: query
+          name: minLevel
+          schema:
+            type: integer
+          description: Minimum quest level
+        - in: query
+          name: maxLevel
+          schema:
+            type: integer
+          description: Maximum quest level
+        - in: query
+          name: expansionId
+          schema:
+            type: integer
+          description: Filter by expansion ID
+        - in: query
+          name: isRepeatable
+          schema:
+            type: boolean
+          description: Filter for repeatable quests
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of quests matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Quest'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/quests/{id}:
+    get:
+      summary: Get quest by ID
+      description: Returns detailed information about a specific quest including embedded objectives
+      tags:
+        - Quests
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Quest ID
+      responses:
+        '200':
+          description: Quest details with objectives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quest'
+        '404':
+          description: Quest not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items:
+    get:
+      summary: Search items
+      description: Search and filter items with pagination
+      tags:
+        - Items
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+        - in: query
+          name: level_min
+          schema:
+            type: integer
+        - in: query
+          name: level_max
+          schema:
+            type: integer
+        - in: query
+          name: rarity
+          schema:
+            type: integer
+        - in: query
+          name: category
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+
+  /api/items/{id}:
+    get:
+      summary: Get item by ID
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Item details
+        '404':
+          description: Item not found
+        '500':
+          description: Server error
+
+components:
+  schemas:
+    Fish:
+      type: object
+      properties:
+        _id:
+          type: integer
+          description: Unique fish identifier
+        name:
+          type: string
+          description: Fish name
+        patch:
+          type: number
+          description: Game patch version when fish was introduced
+        location:
+          type: integer
+          description: Location/fishing spot ID
+        startHour:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Start hour in Eorzean time (0-23)
+        endHour:
+          type: integer
+          minimum: 0
+          maximum: 24
+          description: End hour in Eorzean time (0-24)
+        weatherSet:
+          type: array
+          items:
+            type: integer
+          description: Required weather conditions
+        previousWeatherSet:
+          type: array
+          items:
+            type: integer
+          description: Required previous weather conditions
+        bigFish:
+          type: boolean
+          description: Whether this is a big fish
+        folklore:
+          type: boolean
+          description: Whether folklore knowledge is required
+        fishEyes:
+          type: boolean
+          description: Whether Fish Eyes ability is required
+        collectable:
+          type: boolean
+          description: Whether fish can be collected
+        snagging:
+          type: boolean
+          description: Whether snagging is required
+        hookset:
+          type: string
+          description: Required hookset type
+        tug:
+          type: string
+          description: Tug strength indicator
+
+    Quest:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique quest identifier
+        name:
+          type: string
+          description: Quest name
+        level:
+          type: integer
+          description: Quest level requirement
+        expansionId:
+          type: integer
+          description: Expansion ID
+        gilReward:
+          type: integer
+          description: Gil reward amount
+        isRepeatable:
+          type: boolean
+          description: Whether quest is repeatable
+        objectives:
+          type: array
+          description: Quest objectives
+          items:
+            type: object
+        classJobCategoryId:
+          type: integer
+          description: Class/job category restriction
+        journalGenreId:
+          type: integer
+          description: Quest type/genre
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        message:
+          type: string
+          description: Detailed error information

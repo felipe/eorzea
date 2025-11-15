@@ -28,6 +28,20 @@ const gatheringService = new GatheringService();
 const craftingService = new CraftingService();
 const collectiblesService = new CollectiblesService();
 
+/**
+ * Helper function to make internal API calls
+ * @param path - API path (e.g., '/api/fish')
+ * @returns Promise with the JSON response
+ */
+async function fetchInternalAPI(path: string): Promise<any> {
+  const baseUrl = `http://localhost:${PORT}`;
+  const response = await fetch(`${baseUrl}${path}`);
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.statusText}`);
+  }
+  return response.json();
+}
+
 // Serve static CSS
 app.get('/style.css', (_req, res) => {
   res.type('text/css');
@@ -978,6 +992,337 @@ app.get('/quest/:id', (req, res) => {
     </body>
     </html>
   `);
+});
+
+// ============================================================================
+// API ROUTES - Fish
+// ============================================================================
+
+/**
+ * @openapi
+ * /api/fish:
+ *   get:
+ *     summary: Search and filter fish
+ *     description: Returns a paginated list of fish with optional filters for big fish, folklore, and patch
+ *     tags:
+ *       - Fish
+ *     parameters:
+ *       - in: query
+ *         name: big
+ *         schema:
+ *           type: string
+ *           enum: ['1', 'true']
+ *         description: Filter for big fish only
+ *       - in: query
+ *         name: folklore
+ *         schema:
+ *           type: string
+ *           enum: ['1', 'true']
+ *         description: Filter for folklore fish only
+ *       - in: query
+ *         name: patch
+ *         schema:
+ *           type: number
+ *         description: Filter by patch number (e.g., 6.0, 6.5)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of results to skip for pagination
+ *     responses:
+ *       200:
+ *         description: List of fish matching the criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/fish', (req, res) => {
+  try {
+    const options: any = {
+      bigFish: req.query.big === '1' || req.query.big === 'true',
+      folklore: req.query.folklore === '1' || req.query.folklore === 'true',
+      patch: req.query.patch ? parseFloat(req.query.patch as string) : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const result = fishTracker.searchFish(options);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search fish', message: String(error) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/fish/available:
+ *   get:
+ *     summary: Get currently available fish
+ *     description: Returns fish that are available to catch at the current Eorzean time, considering time windows and weather conditions
+ *     tags:
+ *       - Fish
+ *     responses:
+ *       200:
+ *         description: List of currently available fish
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 eorzeanTime:
+ *                   type: object
+ *                   properties:
+ *                     hours:
+ *                       type: integer
+ *                     minutes:
+ *                       type: integer
+ *                 availableFish:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/fish/available', (req, res) => {
+  try {
+    const now = new Date();
+    const et = getEorzeanTime(now);
+    const availableFish = fishTracker.getAvailableFish(now);
+
+    res.json({
+      eorzeanTime: {
+        hours: et.hours,
+        minutes: et.minutes,
+      },
+      availableFish,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get available fish', message: String(error) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/fish/{id}:
+ *   get:
+ *     summary: Get fish by ID
+ *     description: Returns detailed information about a specific fish
+ *     tags:
+ *       - Fish
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Fish ID
+ *     responses:
+ *       200:
+ *         description: Fish details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 name:
+ *                   type: string
+ *                 patch:
+ *                   type: number
+ *                 location:
+ *                   type: object
+ *                 startHour:
+ *                   type: integer
+ *                 endHour:
+ *                   type: integer
+ *                 weatherSet:
+ *                   type: array
+ *                 bigFish:
+ *                   type: boolean
+ *                 folklore:
+ *                   type: boolean
+ *       404:
+ *         description: Fish not found
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/fish/:id', (req, res) => {
+  try {
+    const fishId = parseInt(req.params.id);
+    const fish = fishTracker.getFishById(fishId);
+
+    if (!fish) {
+      return res.status(404).json({ error: 'Fish not found' });
+    }
+
+    res.json(fish);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get fish', message: String(error) });
+  }
+});
+
+// ============================================================================
+// API ROUTES - Quests
+// ============================================================================
+
+/**
+ * @openapi
+ * /api/quests:
+ *   get:
+ *     summary: Search quests
+ *     description: Search and filter quests by name, level, expansion, and other criteria
+ *     tags:
+ *       - Quests
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by quest name (partial match)
+ *       - in: query
+ *         name: level
+ *         schema:
+ *           type: integer
+ *         description: Filter by exact level
+ *       - in: query
+ *         name: minLevel
+ *         schema:
+ *           type: integer
+ *         description: Minimum quest level
+ *       - in: query
+ *         name: maxLevel
+ *         schema:
+ *           type: integer
+ *         description: Maximum quest level
+ *       - in: query
+ *         name: expansionId
+ *         schema:
+ *           type: integer
+ *         description: Filter by expansion ID
+ *       - in: query
+ *         name: isRepeatable
+ *         schema:
+ *           type: boolean
+ *         description: Filter for repeatable quests
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: List of quests matching criteria
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/quests', (req, res) => {
+  try {
+    const options: any = {
+      name: req.query.name as string,
+      level: req.query.level ? parseInt(req.query.level as string) : undefined,
+      minLevel: req.query.minLevel ? parseInt(req.query.minLevel as string) : undefined,
+      maxLevel: req.query.maxLevel ? parseInt(req.query.maxLevel as string) : undefined,
+      expansionId: req.query.expansionId ? parseInt(req.query.expansionId as string) : undefined,
+      isRepeatable: req.query.isRepeatable === 'true' ? true : req.query.isRepeatable === 'false' ? false : undefined,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
+    };
+
+    const quests = questTracker.searchQuests(options);
+    res.json(quests);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to search quests', message: String(error) });
+  }
+});
+
+/**
+ * @openapi
+ * /api/quests/{id}:
+ *   get:
+ *     summary: Get quest by ID
+ *     description: Returns detailed information about a specific quest including embedded objectives
+ *     tags:
+ *       - Quests
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Quest ID
+ *     responses:
+ *       200:
+ *         description: Quest details with objectives
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: integer
+ *                 name:
+ *                   type: string
+ *                 level:
+ *                   type: integer
+ *                 objectives:
+ *                   type: array
+ *                 gilReward:
+ *                   type: integer
+ *                 isRepeatable:
+ *                   type: boolean
+ *       404:
+ *         description: Quest not found
+ *       500:
+ *         description: Server error
+ */
+app.get('/api/quests/:id', (req, res) => {
+  try {
+    const questId = parseInt(req.params.id);
+    const quest = questTracker.getQuestById(questId);
+
+    if (!quest) {
+      return res.status(404).json({ error: 'Quest not found' });
+    }
+
+    res.json(quest);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get quest', message: String(error) });
+  }
 });
 
 // ============================================================================
