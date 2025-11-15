@@ -1361,7 +1361,73 @@ app.get('/api/quests/:id', (req, res) => {
 // API ROUTES - Items
 // ============================================================================
 
-// Search items
+/**
+ * @openapi
+ * /api/items:
+ *   get:
+ *     summary: Search items
+ *     description: Search and filter items by name, level, rarity, and category with pagination
+ *     tags:
+ *       - Items
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by item name (partial match)
+ *       - in: query
+ *         name: level_min
+ *         schema:
+ *           type: integer
+ *         description: Minimum item level
+ *       - in: query
+ *         name: level_max
+ *         schema:
+ *           type: integer
+ *         description: Maximum item level
+ *       - in: query
+ *         name: rarity
+ *         schema:
+ *           type: integer
+ *         description: Item rarity (1-7)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: integer
+ *         description: Item UI category ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items', (req, res) => {
   try {
     const options = {
@@ -1381,7 +1447,33 @@ app.get('/api/items', (req, res) => {
   }
 });
 
-// Get item by ID
+/**
+ * @openapi
+ * /api/items/{id}:
+ *   get:
+ *     summary: Get item by ID
+ *     description: Returns detailed information about a specific item
+ *     tags:
+ *       - Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Item ID
+ *     responses:
+ *       200:
+ *         description: Item details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items/:id', (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
@@ -1397,7 +1489,33 @@ app.get('/api/items/:id', (req, res) => {
   }
 });
 
-// Get item guide
+/**
+ * @openapi
+ * /api/items/{id}/guide:
+ *   get:
+ *     summary: Get item hunting/obtaining guide
+ *     description: Returns comprehensive guide on how to obtain an item including all sources
+ *     tags:
+ *       - Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Item ID
+ *     responses:
+ *       200:
+ *         description: Item guide with obtaining methods
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items/:id/guide', (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
@@ -1413,7 +1531,33 @@ app.get('/api/items/:id/guide', (req, res) => {
   }
 });
 
-// Get item sources
+/**
+ * @openapi
+ * /api/items/{id}/sources:
+ *   get:
+ *     summary: Get item sources
+ *     description: Returns all ways to obtain an item (crafting, gathering, vendors, etc.)
+ *     tags:
+ *       - Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Item ID
+ *     responses:
+ *       200:
+ *         description: List of item sources
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items/:id/sources', (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
@@ -1424,7 +1568,33 @@ app.get('/api/items/:id/sources', (req, res) => {
   }
 });
 
-// Get item uses
+/**
+ * @openapi
+ * /api/items/{id}/uses:
+ *   get:
+ *     summary: Get item uses
+ *     description: Returns all uses for an item (recipes, quests, etc.)
+ *     tags:
+ *       - Items
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Item ID
+ *     responses:
+ *       200:
+ *         description: List of item uses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items/:id/uses', (req, res) => {
   try {
     const itemId = parseInt(req.params.id);
@@ -1435,7 +1605,26 @@ app.get('/api/items/:id/uses', (req, res) => {
   }
 });
 
-// Get item categories
+/**
+ * @openapi
+ * /api/items/categories:
+ *   get:
+ *     summary: Get all item categories
+ *     description: Returns list of all item UI categories for filtering
+ *     tags:
+ *       - Items
+ *     responses:
+ *       200:
+ *         description: List of item categories
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/items/categories', (_req, res) => {
   try {
     const categories = itemService.getItemCategories();
@@ -1449,7 +1638,69 @@ app.get('/api/items/categories', (_req, res) => {
 // API ROUTES - Gathering
 // ============================================================================
 
-// Search gathering points
+/**
+ * @openapi
+ * /api/gathering/points:
+ *   get:
+ *     summary: Search gathering points
+ *     description: Search and filter gathering points (mining/botany nodes) by type, level, location, and item
+ *     tags:
+ *       - Gathering
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *         description: Gathering type (Mining, Botany, etc.)
+ *       - in: query
+ *         name: level_min
+ *         schema:
+ *           type: integer
+ *         description: Minimum gathering level
+ *       - in: query
+ *         name: level_max
+ *         schema:
+ *           type: integer
+ *         description: Maximum gathering level
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *         description: Location/place name
+ *       - in: query
+ *         name: item
+ *         schema:
+ *           type: string
+ *         description: Item name available at the node
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/gathering/points', (req, res) => {
   try {
     const options: any = {
@@ -1469,7 +1720,33 @@ app.get('/api/gathering/points', (req, res) => {
   }
 });
 
-// Get gathering point by ID
+/**
+ * @openapi
+ * /api/gathering/points/{id}:
+ *   get:
+ *     summary: Get gathering point by ID
+ *     description: Returns detailed information about a specific gathering point including available items
+ *     tags:
+ *       - Gathering
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Gathering point ID
+ *     responses:
+ *       200:
+ *         description: Gathering point details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Gathering point not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/gathering/points/:id', (req, res) => {
   try {
     const pointId = parseInt(req.params.id);
@@ -1485,7 +1762,26 @@ app.get('/api/gathering/points/:id', (req, res) => {
   }
 });
 
-// Get available timed nodes
+/**
+ * @openapi
+ * /api/gathering/available:
+ *   get:
+ *     summary: Get currently available timed nodes
+ *     description: Returns gathering nodes that are currently available based on Eorzean time (ephemeral/timed nodes)
+ *     tags:
+ *       - Gathering
+ *     responses:
+ *       200:
+ *         description: List of currently available timed gathering nodes
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/gathering/available', (_req, res) => {
   try {
     const nodes = gatheringService.getAvailableNodes(new Date());
@@ -1495,7 +1791,26 @@ app.get('/api/gathering/available', (_req, res) => {
   }
 });
 
-// Get gathering types
+/**
+ * @openapi
+ * /api/gathering/types:
+ *   get:
+ *     summary: Get all gathering types
+ *     description: Returns list of all gathering types (Mining, Botany, etc.) for filtering
+ *     tags:
+ *       - Gathering
+ *     responses:
+ *       200:
+ *         description: List of gathering types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/gathering/types', (_req, res) => {
   try {
     const types = gatheringService.getGatheringTypes();
@@ -1509,7 +1824,69 @@ app.get('/api/gathering/types', (_req, res) => {
 // API ROUTES - Crafting
 // ============================================================================
 
-// Search recipes
+/**
+ * @openapi
+ * /api/recipes:
+ *   get:
+ *     summary: Search recipes
+ *     description: Search and filter crafting recipes by craft type, result item, ingredients, and level
+ *     tags:
+ *       - Crafting
+ *     parameters:
+ *       - in: query
+ *         name: craft_type
+ *         schema:
+ *           type: string
+ *         description: Craft type (CRP, BSM, ARM, GSM, LTW, WVR, ALC, CUL)
+ *       - in: query
+ *         name: result_item
+ *         schema:
+ *           type: string
+ *         description: Name of the item being crafted
+ *       - in: query
+ *         name: ingredient
+ *         schema:
+ *           type: string
+ *         description: Name of required ingredient
+ *       - in: query
+ *         name: level_min
+ *         schema:
+ *           type: integer
+ *         description: Minimum recipe level
+ *       - in: query
+ *         name: level_max
+ *         schema:
+ *           type: integer
+ *         description: Maximum recipe level
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/recipes', (req, res) => {
   try {
     const options: any = {
@@ -1529,7 +1906,33 @@ app.get('/api/recipes', (req, res) => {
   }
 });
 
-// Get recipe by ID
+/**
+ * @openapi
+ * /api/recipes/{id}:
+ *   get:
+ *     summary: Get recipe by ID
+ *     description: Returns detailed information about a specific crafting recipe including ingredients
+ *     tags:
+ *       - Crafting
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Recipe ID
+ *     responses:
+ *       200:
+ *         description: Recipe details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Recipe not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/recipes/:id', (req, res) => {
   try {
     const recipeId = parseInt(req.params.id);
@@ -1545,7 +1948,33 @@ app.get('/api/recipes/:id', (req, res) => {
   }
 });
 
-// Get recipe guide
+/**
+ * @openapi
+ * /api/recipes/{id}/guide:
+ *   get:
+ *     summary: Get crafting guide for recipe
+ *     description: Returns step-by-step guide for crafting an item including requirements and tips
+ *     tags:
+ *       - Crafting
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Recipe ID
+ *     responses:
+ *       200:
+ *         description: Crafting guide
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Recipe not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/recipes/:id/guide', (req, res) => {
   try {
     const recipeId = parseInt(req.params.id);
@@ -1561,7 +1990,31 @@ app.get('/api/recipes/:id/guide', (req, res) => {
   }
 });
 
-// Get recipe material tree
+/**
+ * @openapi
+ * /api/recipes/{id}/materials:
+ *   get:
+ *     summary: Get full material tree for recipe
+ *     description: Returns recursive material breakdown showing all raw materials needed (including sub-crafts)
+ *     tags:
+ *       - Crafting
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Recipe ID
+ *     responses:
+ *       200:
+ *         description: Material tree with all required materials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/recipes/:id/materials', (req, res) => {
   try {
     const recipeId = parseInt(req.params.id);
@@ -1572,7 +2025,26 @@ app.get('/api/recipes/:id/materials', (req, res) => {
   }
 });
 
-// Get craft types
+/**
+ * @openapi
+ * /api/craft-types:
+ *   get:
+ *     summary: Get all craft types
+ *     description: Returns list of all crafting classes (CRP, BSM, ARM, GSM, LTW, WVR, ALC, CUL)
+ *     tags:
+ *       - Crafting
+ *     responses:
+ *       200:
+ *         description: List of craft types
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/craft-types', (_req, res) => {
   try {
     const craftTypes = craftingService.getCraftTypes();
@@ -1586,7 +2058,59 @@ app.get('/api/craft-types', (_req, res) => {
 // API ROUTES - Collectibles
 // ============================================================================
 
-// Search mounts
+/**
+ * @openapi
+ * /api/mounts:
+ *   get:
+ *     summary: Search mounts
+ *     description: Search and filter mounts by name, flying capability, and aquatic capability
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by mount name (partial match)
+ *       - in: query
+ *         name: is_flying
+ *         schema:
+ *           type: boolean
+ *         description: Filter by flying capability
+ *       - in: query
+ *         name: is_aquatic
+ *         schema:
+ *           type: boolean
+ *         description: Filter by aquatic capability
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/mounts', (req, res) => {
   try {
     const options = {
@@ -1604,7 +2128,33 @@ app.get('/api/mounts', (req, res) => {
   }
 });
 
-// Get mount by ID
+/**
+ * @openapi
+ * /api/mounts/{id}:
+ *   get:
+ *     summary: Get mount by ID
+ *     description: Returns detailed information about a specific mount
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Mount ID
+ *     responses:
+ *       200:
+ *         description: Mount details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Mount not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/mounts/:id', (req, res) => {
   try {
     const mountId = parseInt(req.params.id);
@@ -1620,7 +2170,54 @@ app.get('/api/mounts/:id', (req, res) => {
   }
 });
 
-// Search companions
+/**
+ * @openapi
+ * /api/companions:
+ *   get:
+ *     summary: Search companions (minions)
+ *     description: Search and filter minions/companions by name and battle capability
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by companion name (partial match)
+ *       - in: query
+ *         name: is_battle
+ *         schema:
+ *           type: boolean
+ *         description: Filter by battle companion capability
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/companions', (req, res) => {
   try {
     const options = {
@@ -1637,7 +2234,33 @@ app.get('/api/companions', (req, res) => {
   }
 });
 
-// Get companion by ID
+/**
+ * @openapi
+ * /api/companions/{id}:
+ *   get:
+ *     summary: Get companion by ID
+ *     description: Returns detailed information about a specific minion/companion
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Companion ID
+ *     responses:
+ *       200:
+ *         description: Companion details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Companion not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/companions/:id', (req, res) => {
   try {
     const companionId = parseInt(req.params.id);
@@ -1653,7 +2276,54 @@ app.get('/api/companions/:id', (req, res) => {
   }
 });
 
-// Search orchestrion rolls
+/**
+ * @openapi
+ * /api/orchestrion:
+ *   get:
+ *     summary: Search orchestrion rolls
+ *     description: Search and filter orchestrion rolls (music) by name and category
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *         description: Search by orchestrion roll name (partial match)
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: integer
+ *         description: Filter by orchestrion category ID
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *         description: Maximum number of results
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Pagination offset
+ *     responses:
+ *       200:
+ *         description: Search results with pagination info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/orchestrion', (req, res) => {
   try {
     const options = {
@@ -1670,7 +2340,33 @@ app.get('/api/orchestrion', (req, res) => {
   }
 });
 
-// Get orchestrion roll by ID
+/**
+ * @openapi
+ * /api/orchestrion/{id}:
+ *   get:
+ *     summary: Get orchestrion roll by ID
+ *     description: Returns detailed information about a specific orchestrion roll (music)
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Orchestrion roll ID
+ *     responses:
+ *       200:
+ *         description: Orchestrion roll details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       404:
+ *         description: Orchestrion roll not found
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/orchestrion/:id', (req, res) => {
   try {
     const orchestrionId = parseInt(req.params.id);
@@ -1686,7 +2382,55 @@ app.get('/api/orchestrion/:id', (req, res) => {
   }
 });
 
-// Get collection stats
+/**
+ * @openapi
+ * /api/collection/stats:
+ *   get:
+ *     summary: Get collection statistics
+ *     description: Returns collection progress statistics for a character (mounts, minions, orchestrion)
+ *     tags:
+ *       - Collectibles
+ *     parameters:
+ *       - in: query
+ *         name: character_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Character ID
+ *     responses:
+ *       200:
+ *         description: Collection statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 mounts:
+ *                   type: object
+ *                   properties:
+ *                     collected:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                 companions:
+ *                   type: object
+ *                   properties:
+ *                     collected:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                 orchestrion:
+ *                   type: object
+ *                   properties:
+ *                     collected:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *       400:
+ *         description: Missing required character_id parameter
+ *       500:
+ *         description: Server error
+ */
 app.get('/api/collection/stats', (req, res) => {
   try {
     const characterId = req.query.character_id ? parseInt(req.query.character_id as string) : undefined;

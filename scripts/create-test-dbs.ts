@@ -145,6 +145,15 @@ gameDb.exec(`
     order_minor INTEGER
   );
 
+  -- Item Search Categories
+  CREATE TABLE IF NOT EXISTS item_search_categories (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    icon INTEGER,
+    category INTEGER,
+    order_id INTEGER
+  );
+
   -- Quests table
   CREATE TABLE IF NOT EXISTS quests (
     id INTEGER PRIMARY KEY,
@@ -305,6 +314,9 @@ gameDb.exec(`
 
   INSERT OR IGNORE INTO item_ui_categories (id, name, order_major, order_minor)
   VALUES (1, 'General', 0, 0);
+
+  INSERT OR IGNORE INTO item_search_categories (id, name, category, order_id)
+  VALUES (1, 'General Items', 1, 0);
 
   INSERT OR IGNORE INTO quests (id, name, level, exp_reward, gil_reward, is_repeatable, objectives, sort_key, expansion_id)
   VALUES (1, 'Test Quest', 1, 100, 50, 0, '[]', 1, 1);

@@ -304,6 +304,7 @@ paths:
   /api/items/{id}:
     get:
       summary: Get item by ID
+      description: Returns detailed information about a specific item
       tags:
         - Items
       parameters:
@@ -312,13 +313,814 @@ paths:
           required: true
           schema:
             type: integer
+          description: Item ID
       responses:
         '200':
           description: Item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
         '404':
           description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/guide:
+    get:
+      summary: Get item obtaining guide
+      description: Returns detailed guide on how to obtain this item
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Item ID
+      responses:
+        '200':
+          description: Item obtaining guide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '#/components/schemas/Item'
+                  guide:
+                    type: object
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/sources:
+    get:
+      summary: Get all item sources
+      description: Returns all ways to obtain this item (crafting, gathering, vendors, etc.)
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Item ID
+      responses:
+        '200':
+          description: Item sources
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '#/components/schemas/Item'
+                  sources:
+                    type: object
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/uses:
+    get:
+      summary: Get all item uses
+      description: Returns all uses for this item (recipes, quest requirements, etc.)
+      tags:
+        - Items
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Item ID
+      responses:
+        '200':
+          description: Item uses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  item:
+                    $ref: '#/components/schemas/Item'
+                  uses:
+                    type: object
+        '404':
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/categories:
+    get:
+      summary: List all item categories
+      description: Returns all item UI categories
+      tags:
+        - Items
+      responses:
+        '200':
+          description: List of item categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/gathering/points:
+    get:
+      summary: Search gathering points
+      description: Search and filter gathering points/nodes with pagination
+      tags:
+        - Gathering
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: integer
+          description: Gathering type ID
+        - in: query
+          name: level
+          schema:
+            type: integer
+          description: Gathering level
+        - in: query
+          name: item_id
+          schema:
+            type: integer
+          description: Filter by item that can be gathered
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of gathering points
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GatheringPoint'
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/gathering/points/{id}:
+    get:
+      summary: Get gathering point by ID
+      description: Returns detailed information about a specific gathering point
+      tags:
+        - Gathering
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Gathering point ID
+      responses:
+        '200':
+          description: Gathering point details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GatheringPoint'
+        '404':
+          description: Gathering point not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/gathering/available:
+    get:
+      summary: Get available timed nodes
+      description: Returns timed gathering nodes currently available based on Eorzean time
+      tags:
+        - Gathering
+      responses:
+        '200':
+          description: List of currently available timed nodes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  eorzeanTime:
+                    type: object
+                    properties:
+                      hours:
+                        type: integer
+                      minutes:
+                        type: integer
+                  availableNodes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GatheringPoint'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/gathering/types:
+    get:
+      summary: List all gathering types
+      description: Returns all gathering types (Mining, Botany, etc.)
+      tags:
+        - Gathering
+      responses:
+        '200':
+          description: List of gathering types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/recipes:
+    get:
+      summary: Search recipes
+      description: Search and filter crafting recipes with pagination
+      tags:
+        - Crafting
+      parameters:
+        - in: query
+          name: item_id
+          schema:
+            type: integer
+          description: Filter by result item ID
+        - in: query
+          name: craft_type
+          schema:
+            type: integer
+          description: Filter by craft type ID
+        - in: query
+          name: level_min
+          schema:
+            type: integer
+          description: Minimum recipe level
+        - in: query
+          name: level_max
+          schema:
+            type: integer
+          description: Maximum recipe level
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of recipes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recipe'
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/recipes/{id}:
+    get:
+      summary: Get recipe by ID
+      description: Returns detailed information about a specific recipe
+      tags:
+        - Crafting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Recipe ID
+      responses:
+        '200':
+          description: Recipe details with ingredients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recipe'
+        '404':
+          description: Recipe not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/recipes/{id}/guide:
+    get:
+      summary: Get crafting guide
+      description: Returns step-by-step crafting guide for a recipe
+      tags:
+        - Crafting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Recipe ID
+      responses:
+        '200':
+          description: Crafting guide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipe:
+                    $ref: '#/components/schemas/Recipe'
+                  guide:
+                    type: object
+        '404':
+          description: Recipe not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/recipes/{id}/materials:
+    get:
+      summary: Get full material tree
+      description: Returns complete material tree for crafting (all sub-components)
+      tags:
+        - Crafting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Recipe ID
+      responses:
+        '200':
+          description: Material tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recipe:
+                    $ref: '#/components/schemas/Recipe'
+                  materials:
+                    type: object
+        '404':
+          description: Recipe not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/craft-types:
+    get:
+      summary: List all craft types
+      description: Returns all crafting disciplines (Carpenter, Blacksmith, etc.)
+      tags:
+        - Crafting
+      responses:
+        '200':
+          description: List of craft types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/mounts:
+    get:
+      summary: Search mounts
+      description: Search and filter mounts with pagination
+      tags:
+        - Collectibles
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Search by mount name (partial match)
+        - in: query
+          name: is_flying
+          schema:
+            type: boolean
+          description: Filter by flying capability
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of mounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Mount'
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/mounts/{id}:
+    get:
+      summary: Get mount by ID
+      description: Returns detailed information about a specific mount
+      tags:
+        - Collectibles
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Mount ID
+      responses:
+        '200':
+          description: Mount details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mount'
+        '404':
+          description: Mount not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/companions:
+    get:
+      summary: Search companions (minions)
+      description: Search and filter minions with pagination
+      tags:
+        - Collectibles
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Search by minion name (partial match)
+        - in: query
+          name: is_battle
+          schema:
+            type: boolean
+          description: Filter by battle capability
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of companions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Companion'
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/companions/{id}:
+    get:
+      summary: Get companion by ID
+      description: Returns detailed information about a specific minion
+      tags:
+        - Collectibles
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Companion ID
+      responses:
+        '200':
+          description: Companion details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Companion'
+        '404':
+          description: Companion not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/orchestrion:
+    get:
+      summary: Search orchestrion rolls
+      description: Search and filter orchestrion rolls (music) with pagination
+      tags:
+        - Collectibles
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+          description: Search by song name (partial match)
+        - in: query
+          name: category_id
+          schema:
+            type: integer
+          description: Filter by category ID
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of results
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of orchestrion rolls
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrchestrionRoll'
+                  total:
+                    type: integer
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/orchestrion/{id}:
+    get:
+      summary: Get orchestrion roll by ID
+      description: Returns detailed information about a specific orchestrion roll
+      tags:
+        - Collectibles
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Orchestrion roll ID
+      responses:
+        '200':
+          description: Orchestrion roll details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestrionRoll'
+        '404':
+          description: Orchestrion roll not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/collection/stats:
+    get:
+      summary: Get collection statistics
+      description: Returns collection progress statistics for a character (mounts, minions, orchestrion)
+      tags:
+        - Collectibles
+      parameters:
+        - in: query
+          name: character_id
+          required: true
+          schema:
+            type: integer
+          description: Character ID
+      responses:
+        '200':
+          description: Collection statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mounts:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      collected:
+                        type: integer
+                  companions:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      collected:
+                        type: integer
+                  orchestrion:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      collected:
+                        type: integer
+        '400':
+          description: Missing character_id parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   schemas:
@@ -411,6 +1213,216 @@ components:
         journalGenreId:
           type: integer
           description: Quest type/genre
+
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique item identifier
+        name:
+          type: string
+          description: Item name
+        description:
+          type: string
+          description: Item description
+        level_item:
+          type: integer
+          description: Item level
+        level_equip:
+          type: integer
+          description: Equip level requirement
+        rarity:
+          type: integer
+          description: Item rarity (1=common, 2=uncommon, etc.)
+        icon:
+          type: integer
+          description: Icon ID
+        item_ui_category_id:
+          type: integer
+          description: UI category ID
+        stack_size:
+          type: integer
+          description: Maximum stack size
+        price_mid:
+          type: integer
+          description: Vendor sell price
+        can_be_hq:
+          type: boolean
+          description: Can be high quality
+        is_unique:
+          type: boolean
+          description: Unique item (only one per character)
+        is_untradable:
+          type: boolean
+          description: Cannot be traded
+
+    GatheringPoint:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique gathering point identifier
+        base_id:
+          type: integer
+          description: Base gathering point ID
+        gathering_type_id:
+          type: integer
+          description: Type of gathering (Mining, Botany, etc.)
+        level:
+          type: integer
+          description: Gathering level requirement
+        place_name_id:
+          type: integer
+          description: Location ID
+        territory_type_id:
+          type: integer
+          description: Territory/zone ID
+        x:
+          type: number
+          description: X coordinate
+        y:
+          type: number
+          description: Y coordinate
+        radius:
+          type: number
+          description: Gathering radius
+        items:
+          type: array
+          description: Items available at this node
+          items:
+            type: object
+
+    Recipe:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique recipe identifier
+        result_item_id:
+          type: integer
+          description: ID of the item this recipe produces
+        craft_type_id:
+          type: integer
+          description: Crafting discipline ID
+        recipe_level:
+          type: integer
+          description: Recipe level
+        difficulty:
+          type: integer
+          description: Crafting difficulty
+        durability:
+          type: integer
+          description: Recipe durability
+        quality:
+          type: integer
+          description: Maximum quality
+        required_craftsmanship:
+          type: integer
+          description: Required craftsmanship stat
+        required_control:
+          type: integer
+          description: Required control stat
+        can_hq:
+          type: boolean
+          description: Can produce high quality
+        can_quick_synth:
+          type: boolean
+          description: Can use quick synthesis
+        ingredients:
+          type: array
+          description: Recipe ingredients
+          items:
+            type: object
+            properties:
+              item_id:
+                type: integer
+              quantity:
+                type: integer
+
+    Mount:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique mount identifier
+        name:
+          type: string
+          description: Mount name
+        description:
+          type: string
+          description: Mount description
+        icon:
+          type: integer
+          description: Icon ID
+        is_flying:
+          type: boolean
+          description: Can fly
+        is_aquatic:
+          type: boolean
+          description: Can traverse water
+        movement_speed:
+          type: integer
+          description: Movement speed
+        order_id:
+          type: integer
+          description: Sort order
+
+    Companion:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique companion (minion) identifier
+        name:
+          type: string
+          description: Minion name
+        description:
+          type: string
+          description: Minion description
+        icon:
+          type: integer
+          description: Icon ID
+        behavior_id:
+          type: integer
+          description: Behavior type ID
+        is_battle:
+          type: boolean
+          description: Can participate in battle
+        cost:
+          type: integer
+          description: Summoning cost
+        hp:
+          type: integer
+          description: Hit points
+        attack:
+          type: integer
+          description: Attack stat
+        defense:
+          type: integer
+          description: Defense stat
+        speed:
+          type: integer
+          description: Speed stat
+
+    OrchestrionRoll:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique orchestrion roll identifier
+        name:
+          type: string
+          description: Song name
+        description:
+          type: string
+          description: Song description
+        icon:
+          type: integer
+          description: Icon ID
+        category_id:
+          type: integer
+          description: Music category ID
 
     Error:
       type: object
