@@ -3,7 +3,7 @@ import { join } from 'path';
 
 const parser = new CSVParser(
   join(process.cwd(), 'data', 'game-schemas'),
-  join(process.cwd(), 'data', 'game-csv'),
+  join(process.cwd(), 'data', 'ffxiv-datamining', 'csv'),
   { resolveForeignKeys: false }
 );
 

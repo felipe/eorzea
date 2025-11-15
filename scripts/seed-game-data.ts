@@ -17,7 +17,7 @@ import { parse } from 'csv-parse/sync';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const CSV_DIR = join(process.cwd(), 'data', 'game-csv');
+const CSV_DIR = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv');
 const DB_PATH = join(process.cwd(), 'data', 'game.db');
 
 interface CSVRow {
@@ -696,7 +696,8 @@ async function main() {
   // Check if CSV directory exists
   if (!existsSync(CSV_DIR)) {
     console.error(`❌ CSV directory not found: ${CSV_DIR}`);
-    console.error('\n📥 Please run: tsx scripts/download-game-csv.ts');
+    console.error('\n📥 Please ensure the git submodule is initialized:');
+    console.error('   git submodule update --init --recursive');
     process.exit(1);
   }
 

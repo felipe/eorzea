@@ -16,10 +16,10 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "update-fish-data": "./scripts/update-fish-data.sh",
     "seed-fish-db": "tsx scripts/seed-fish-db.ts",
-    "update-quest-data": "tsx scripts/download-quest-data.ts && tsx scripts/parse-quest-data.ts && tsx scripts/seed-quest-db.ts",
+    "parse-quest-data": "tsx scripts/parse-quest-data.ts",
     "seed-quest-db": "tsx scripts/seed-quest-db.ts",
-    "download-csv": "tsx scripts/download-game-csv.ts",
-    "seed-game-data": "tsx scripts/seed-game-data.ts"
+    "seed-game-data": "tsx scripts/seed-game-data.ts",
+    "_comment": "Note: 'parse-quest-data' extracts quest objectives from CSVs. Run before 'seed-quest-db' if you need quest data. 'seed-game-data' handles all data types including quests."
   },
   "keywords": [
     "ffxiv",
@@ -53,19 +53,23 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "inquirer": "^12.10.0",
-    "ora": "^9.0.0"
+    "ora": "^9.0.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@tsconfig/node20": "^20.1.6",
     "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
+    "@types/js-yaml": "^4",
     "@types/node": "^24.10.1",
+    "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
     "jest": "^30.2.0",
+    "js-yaml": "^4.1.1",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.5",
     "ts-node": "^10.9.2",
