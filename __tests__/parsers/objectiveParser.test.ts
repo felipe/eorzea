@@ -5,7 +5,7 @@
 import { ObjectiveParser } from '../../scripts/parse-objectives';
 import { join } from 'path';
 
-const CSV_DIR = join(process.cwd(), 'data', 'game-csv');
+const CSV_DIR = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv');
 const FISH_DATA_PATH = join(process.cwd(), 'data', 'fish-data.json');
 const FISH_DB_PATH = join(process.cwd(), 'data', 'fish.db');
 

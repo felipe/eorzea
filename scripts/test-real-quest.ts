@@ -8,7 +8,7 @@ import { CSVParser } from '../src/parsers/csvParser.js';
 import { join } from 'path';
 
 const schemaDir = join(process.cwd(), 'data', 'game-schemas');
-const csvDir = join(process.cwd(), 'data', 'game-csv');
+const csvDir = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv');
 
 console.log('\n🎮 Testing CSV Parser with Real FFXIV Quest Data\n');
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');

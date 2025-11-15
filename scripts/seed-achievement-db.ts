@@ -9,7 +9,7 @@ import { parse } from 'csv-parse/sync';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-const CSV_PATH = join(process.cwd(), 'data', 'game-csv', 'Achievement.csv');
+const CSV_PATH = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv', 'Achievement.csv');
 const DB_PATH = join(process.cwd(), 'data', 'game.db');
 
 interface AchievementRow {
