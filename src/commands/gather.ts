@@ -1,12 +1,12 @@
 /**
- * Gathering CLI Commands
+ * Gathering CLI Commands - Updated for Time-Aware Nodes
  */
 
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import ora from 'ora';
-import { GatheringService } from '../services/gatheringService.js';
-import { getPlayerProfileService } from '../services/playerProfile.js';
+import { GatheringNodeService } from '../services/gatheringNodeService.js';
+import { getEorzeanTime, formatTimeWindow } from '../utils/eorzeanTime.js';
 
 export interface GatherCommandOptions {
   id?: string;
@@ -16,7 +16,6 @@ export interface GatherCommandOptions {
   item?: string;
   level?: string;
   limit?: string;
-  gathered?: boolean;
   location?: string;
   timed?: boolean;
 }
@@ -25,69 +24,92 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
   const spinner = ora('Loading gathering data...').start();
 
   try {
-    const service = new GatheringService();
-    const profileService = getPlayerProfileService();
+    const service = new GatheringNodeService();
+    const now = new Date();
+    const et = getEorzeanTime(now);
 
-    // Handle specific gathering point ID lookup
+    // Handle specific node ID lookup
     if (options.id) {
-      const pointId = parseInt(options.id);
-
-      // Handle marking as gathered
-      if (options.gathered) {
-        spinner.stop();
-        await markNodeGathered(profileService, service, pointId);
-        service.close();
-        return;
-      }
-
-      const point = service.getGatheringPointById(pointId);
+      const nodeId = parseInt(options.id);
+      const node = service.getNodeById(nodeId);
 
       spinner.stop();
 
-      if (!point) {
-        console.log(chalk.yellow(`Gathering point with ID ${pointId} not found`));
+      if (!node) {
+        console.log(chalk.yellow(`Gathering node with ID ${nodeId} not found`));
         service.close();
         return;
       }
 
-      // Display detailed gathering point information
+      // Display detailed node information
       console.log(
         chalk.cyan.bold(
-          `\n⛏️  Gathering Point #${point.id} - ${point.gathering_type_name || 'Unknown Type'}`
+          `\n⛏️  ${node.name || 'Gathering Node'} #${node.id} - ${getNodeTypeIcon(node.type)} ${node.type.toUpperCase()}`
         )
       );
-      console.log(chalk.gray('━'.repeat(60)));
+      console.log(chalk.gray('━'.repeat(70)));
 
       const details: Array<[string, string]> = [
-        ['Type', point.gathering_type_name || 'Unknown'],
-        ['Level', point.gathering_level?.toString() || 'N/A'],
-        ['Location', point.place_name || 'Unknown'],
-        ['Territory', point.territory_name || 'Unknown'],
-        ['Timed Node', point.is_limited ? chalk.yellow('Yes') : chalk.gray('No')],
+        ['Type', `${getNodeTypeIcon(node.type)} ${node.type}`],
+        ['Level', node.level?.toString() || 'N/A'],
+        ['Location', node.location_name || 'Unknown'],
       ];
+
+      if (node.x && node.y) {
+        details.push(['Coordinates', `(${node.x.toFixed(1)}, ${node.y.toFixed(1)})`]);
+      }
+
+      // Time window info
+      const timeWindow = formatTimeWindow(node.start_hour, node.end_hour);
+      const isAvailable =
+        node.start_hour === 0 && node.end_hour === 24
+          ? true
+          : node.start_hour > node.end_hour
+            ? et.hours >= node.start_hour || et.hours < node.end_hour
+            : et.hours >= node.start_hour && et.hours < node.end_hour;
+
+      details.push(['Time Window', timeWindow]);
+      details.push([
+        'Status',
+        isAvailable ? chalk.green('✓ Available NOW') : chalk.red('✗ Not Available'),
+      ]);
+
+      if (node.folklore) {
+        details.push(['Requires Folklore', chalk.yellow('Yes')]);
+      }
+      if (node.ephemeral) {
+        details.push(['Type', chalk.magenta('Ephemeral Node')]);
+      }
+      if (node.legendary) {
+        details.push(['Type', chalk.yellow('⭐ Legendary Node')]);
+      }
+      if (node.patch) {
+        details.push(['Patch', node.patch.toString()]);
+      }
 
       details.forEach(([key, value]) => {
         console.log(`  ${chalk.dim(key + ':')} ${value}`);
       });
 
       // Show items available at this node
-      if (point.items && point.items.length > 0) {
+      const items = service.getItemsAtNode(nodeId);
+      if (items.length > 0) {
         console.log(chalk.bold('\n📦 Items Available:'));
 
         const itemTable = new Table({
-          head: [chalk.cyan('Item'), chalk.cyan('Level'), chalk.cyan('Hidden')],
+          head: [chalk.cyan('Slot'), chalk.cyan('Item'), chalk.cyan('Hidden')],
           style: {
             head: [],
             border: [],
           },
-          colWidths: [45, 10, 10],
+          colWidths: [8, 50, 10],
         });
 
-        point.items.forEach((item) => {
+        items.forEach((item) => {
           itemTable.push([
+            item.slot.toString(),
             `${item.item_name || 'Unknown'} ${chalk.dim(`(#${item.item_id})`)}`,
-            item.item_level?.toString() || 'N/A',
-            item.is_hidden ? chalk.yellow('Yes') : chalk.gray('No'),
+            item.hidden ? chalk.yellow('Yes') : chalk.gray('No'),
           ]);
         });
 
@@ -99,99 +121,132 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
       return;
     }
 
+    // Determine gathering type filter
+    let typeFilter: string | undefined;
+    if (options.mining) {
+      typeFilter = 'mining';
+    } else if (options.botany) {
+      typeFilter = 'logging'; // Logging is the primary botany type
+    }
+
+    // Handle available nodes
+    if (options.available) {
+      const availableNodes = service.getAvailableNodes(now, typeFilter);
+      spinner.stop();
+
+      if (availableNodes.length === 0) {
+        console.log(chalk.yellow('No gathering nodes currently available'));
+        service.close();
+        return;
+      }
+
+      const limit = options.limit ? parseInt(options.limit) : 20;
+      const displayNodes = availableNodes.slice(0, limit);
+
+      console.log(
+        chalk.bold(
+          `\n⛏️  Currently Available Gathering Nodes (${displayNodes.length}/${availableNodes.length}):`
+        )
+      );
+      console.log(
+        chalk.dim(
+          `   Eorzean Time: ${et.hours.toString().padStart(2, '0')}:${et.minutes.toString().padStart(2, '0')}\n`
+        )
+      );
+
+      displayNodeTableWithTime(displayNodes);
+
+      console.log(chalk.dim(`\n💡 Tip: Use --id <nodeId> to see detailed information\n`));
+      service.close();
+      return;
+    }
+
+    // Handle timed nodes
+    if (options.timed) {
+      const timedNodes = service.getTimedNodes(typeFilter);
+      spinner.stop();
+
+      if (timedNodes.length === 0) {
+        console.log(chalk.yellow('No timed gathering nodes found'));
+        service.close();
+        return;
+      }
+
+      const limit = options.limit ? parseInt(options.limit) : 50;
+      const displayNodes = timedNodes.slice(0, limit);
+
+      console.log(
+        chalk.bold(`\n⛏️  Timed Gathering Nodes (${displayNodes.length}/${timedNodes.length}):`)
+      );
+      console.log(
+        chalk.dim(
+          `   Eorzean Time: ${et.hours.toString().padStart(2, '0')}:${et.minutes.toString().padStart(2, '0')}\n`
+        )
+      );
+
+      displayNodeTableWithTime(displayNodes);
+
+      console.log(chalk.dim(`\n💡 Tip: Use --id <nodeId> to see detailed information\n`));
+      service.close();
+      return;
+    }
+
     // Search by item name
     if (options.item) {
-      const results = service.searchGatheringPoints({
-        item_name: options.item,
+      const nodes = service.searchNodes({
+        type: typeFilter,
+        itemName: options.item,
         limit: options.limit ? parseInt(options.limit) : 20,
       });
 
       spinner.stop();
 
-      if (results.points.length === 0) {
-        console.log(chalk.yellow(`No gathering points found for item: ${options.item}`));
+      if (nodes.length === 0) {
+        console.log(chalk.yellow(`No gathering nodes found for item: ${options.item}`));
         service.close();
         return;
       }
 
-      console.log(chalk.bold(`\n⛏️  Gathering Points for "${options.item}" (${results.points.length} results):\n`));
+      console.log(
+        chalk.bold(`\n⛏️  Gathering Nodes for "${options.item}" (${nodes.length} results):\n`)
+      );
 
-      displayGatheringTable(results.points);
+      displayNodeTable(nodes);
 
-      console.log(chalk.dim(`\n💡 Tip: Use --id <pointId> to see detailed information\n`));
+      console.log(chalk.dim(`\n💡 Tip: Use --id <nodeId> to see detailed information\n`));
       service.close();
       return;
     }
 
-    // Build search options
-    let searchOptions: any = {};
-
-    if (options.mining) {
-      searchOptions.gathering_type = 'Mining';
-    } else if (options.botany) {
-      searchOptions.gathering_type = 'Botany';
-    }
+    // General search
+    const searchOptions: any = {
+      type: typeFilter,
+      location: options.location,
+      limit: options.limit ? parseInt(options.limit) : 20,
+    };
 
     if (options.level) {
       const level = parseInt(options.level);
-      searchOptions.level_min = level - 2;
-      searchOptions.level_max = level + 2;
+      searchOptions.minLevel = level - 2;
+      searchOptions.maxLevel = level + 2;
     }
 
-    if (options.location) {
-      searchOptions.place_name = options.location;
-    }
+    const nodes = service.searchNodes(searchOptions);
+    spinner.stop();
 
-    if (options.timed) {
-      searchOptions.is_limited = true;
-    }
-
-    searchOptions.limit = options.limit ? parseInt(options.limit) : 20;
-
-    let points;
-    let title;
-
-    if (options.available) {
-      // Show available nodes (placeholder - full time support requires additional data)
-      points = service.getAvailableNodes();
-      if (searchOptions.limit) {
-        points = points.slice(0, searchOptions.limit);
-      }
-      title = 'Currently Available Gathering Nodes';
-      spinner.stop();
-    } else if (options.mining) {
-      points = service.getPointsByType('Mining', searchOptions.limit);
-      title = 'Mining Nodes';
-      spinner.stop();
-    } else if (options.botany) {
-      points = service.getPointsByType('Logging', searchOptions.limit);
-      title = 'Botany Nodes';
-      spinner.stop();
-    } else if (options.timed) {
-      points = service.getTimedNodes();
-      if (searchOptions.limit) {
-        points = points.slice(0, searchOptions.limit);
-      }
-      title = 'Timed/Limited Nodes';
-      spinner.stop();
-    } else {
-      const results = service.searchGatheringPoints(searchOptions);
-      points = results.points;
-      title = 'Gathering Nodes';
-      spinner.stop();
-    }
-
-    if (points.length === 0) {
-      console.log(chalk.yellow('No gathering points found matching criteria'));
+    if (nodes.length === 0) {
+      console.log(chalk.yellow('No gathering nodes found matching criteria'));
       service.close();
       return;
     }
 
-    console.log(chalk.bold(`\n⛏️  ${title} (${points.length} results):\n`));
+    const typeLabel = options.mining ? 'Mining' : options.botany ? 'Botany' : 'Gathering';
 
-    displayGatheringTable(points);
+    console.log(chalk.bold(`\n⛏️  ${typeLabel} Nodes (${nodes.length} results):\n`));
 
-    console.log(chalk.dim(`\n💡 Tip: Use --id <pointId> to see detailed information\n`));
+    displayNodeTable(nodes);
+
+    console.log(chalk.dim(`\n💡 Tip: Use --id <nodeId> to see detailed information\n`));
 
     service.close();
   } catch (error) {
@@ -204,69 +259,106 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
   }
 }
 
-function displayGatheringTable(points: any[]): void {
+function getNodeTypeIcon(type: string): string {
+  switch (type.toLowerCase()) {
+    case 'mining':
+      return '⛏️';
+    case 'quarrying':
+      return '⛏️';
+    case 'logging':
+      return '🪓';
+    case 'harvesting':
+      return '🌿';
+    default:
+      return '📦';
+  }
+}
+
+function displayNodeTable(nodes: any[]): void {
   const table = new Table({
     head: [
       chalk.cyan('ID'),
+      chalk.cyan('Name'),
       chalk.cyan('Type'),
-      chalk.cyan('Level'),
+      chalk.cyan('Lvl'),
       chalk.cyan('Location'),
-      chalk.cyan('Timed'),
-      chalk.cyan('Items'),
+      chalk.cyan('Time'),
     ],
     style: {
       head: [],
       border: [],
     },
-    colWidths: [10, 12, 8, 25, 8, 10],
+    colWidths: [8, 25, 12, 6, 25, 15],
   });
 
-  points.forEach((point) => {
+  nodes.forEach((node) => {
+    const timeWindow = formatTimeWindow(node.start_hour, node.end_hour);
     table.push([
-      point.id.toString(),
-      point.gathering_type_name || 'Unknown',
-      point.gathering_level?.toString() || 'N/A',
-      point.place_name || 'Unknown',
-      point.is_limited ? chalk.yellow('✓') : chalk.gray('✗'),
-      point.items?.length?.toString() || '0',
+      node.id.toString(),
+      node.name || chalk.dim('Unnamed'),
+      `${getNodeTypeIcon(node.type)} ${node.type}`,
+      node.level?.toString() || 'N/A',
+      node.location_name || 'Unknown',
+      node.start_hour === 0 && node.end_hour === 24
+        ? chalk.gray('Always')
+        : chalk.yellow(timeWindow),
     ]);
   });
 
   console.log(table.toString());
 }
 
-async function markNodeGathered(
-  profileService: any,
-  gatheringService: GatheringService,
-  pointId: number
-): Promise<void> {
-  const character = profileService.getActiveCharacter();
+function displayNodeTableWithTime(nodes: any[]): void {
+  const table = new Table({
+    head: [
+      chalk.cyan('ID'),
+      chalk.cyan('Name'),
+      chalk.cyan('Type'),
+      chalk.cyan('Lvl'),
+      chalk.cyan('Location'),
+      chalk.cyan('Time Window'),
+      chalk.cyan('Status'),
+    ],
+    style: {
+      head: [],
+      border: [],
+    },
+    colWidths: [8, 20, 10, 6, 20, 14, 16],
+  });
 
-  if (!character) {
-    console.log(chalk.red('No active character.'));
-    console.log(chalk.yellow('Use "eorzea character --add" to add a character first.\n'));
-    return;
-  }
+  nodes.forEach((node) => {
+    const status = node.is_available
+      ? chalk.green('✓ NOW')
+      : node.next_available
+        ? chalk.yellow(`in ${formatTimeUntil(node.next_available)}`)
+        : chalk.gray('N/A');
 
-  const point = gatheringService.getGatheringPointById(pointId);
+    table.push([
+      node.id.toString(),
+      node.name || chalk.dim('Unnamed'),
+      `${getNodeTypeIcon(node.type)} ${node.type}`,
+      node.level?.toString() || 'N/A',
+      node.location_name || 'Unknown',
+      chalk.yellow(node.time_window_display || 'N/A'),
+      status,
+    ]);
+  });
 
-  if (!point) {
-    console.log(chalk.red(`Gathering point ${pointId} not found.\n`));
-    return;
-  }
+  console.log(table.toString());
+}
 
-  // Mark the first item at this point as gathered (for simplicity)
-  if (point.items && point.items.length > 0) {
-    const firstItem = point.items[0];
-    gatheringService.trackGatheredItem(character.id, firstItem.item_id, pointId);
-    console.log(
-      chalk.green(
-        `✓ Marked item "${firstItem.item_name}" from gathering point #${pointId} as gathered!`
-      )
-    );
+function formatTimeUntil(date: Date): string {
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+
+  if (diffMins < 1) {
+    return '< 1m';
+  } else if (diffMins < 60) {
+    return `${diffMins}m`;
   } else {
-    console.log(chalk.yellow(`No items found at gathering point #${pointId}\n`));
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   }
-
-  console.log('');
 }
