@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { FishTrackerService } from './services/fishTracker.js';
 import { QuestTrackerService } from './services/questTracker.js';
 import { ItemService } from './services/itemService.js';
-import { GatheringService } from './services/gatheringService.js';
+import { GatheringNodeService } from './services/gatheringNodeService.js';
 import { CraftingService } from './services/craftingService.js';
 import { CollectiblesService } from './services/collectiblesService.js';
 import {
@@ -20,6 +20,7 @@ import {
   isInTimeWindow,
   getNextWindowStart,
   getCurrentWindowEnd,
+  formatTimeWindow,
 } from './utils/eorzeanTime.js';
 import { getPreviousWeatherPeriodStart, calculateWeather } from './utils/weatherForecast.js';
 
@@ -36,7 +37,7 @@ const openapiSpec = yaml.load(fs.readFileSync(openapiPath, 'utf8')) as any;
 const fishTracker = new FishTrackerService();
 const questTracker = new QuestTrackerService();
 const itemService = new ItemService();
-const gatheringService = new GatheringService();
+const gatheringNodeService = new GatheringNodeService();
 const craftingService = new CraftingService();
 const collectiblesService = new CollectiblesService();
 
@@ -1732,20 +1733,18 @@ app.get('/api/items/categories', (_req, res) => {
  */
 app.get('/api/gathering/points', (req, res) => {
   try {
-    const options: any = {
-      gathering_type: req.query.type as string,
-      level_min: req.query.level_min ? parseInt(req.query.level_min as string) : undefined,
-      level_max: req.query.level_max ? parseInt(req.query.level_max as string) : undefined,
-      place_name: req.query.location as string,
-      item_name: req.query.item as string,
+    const nodes = gatheringNodeService.searchNodes({
+      type: req.query.type as string,
+      minLevel: req.query.level_min ? parseInt(req.query.level_min as string) : undefined,
+      maxLevel: req.query.level_max ? parseInt(req.query.level_max as string) : undefined,
+      location: req.query.location as string,
+      itemName: req.query.item as string,
       limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
-      offset: req.query.offset ? parseInt(req.query.offset as string) : 0,
-    };
+    });
 
-    const result = gatheringService.searchGatheringPoints(options);
-    res.json(result);
+    res.json({ nodes, total: nodes.length });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to search gathering points', message: String(error) });
+    res.status(500).json({ error: 'Failed to search gathering nodes', message: String(error) });
   }
 });
 
@@ -1778,16 +1777,17 @@ app.get('/api/gathering/points', (req, res) => {
  */
 app.get('/api/gathering/points/:id', (req, res) => {
   try {
-    const pointId = parseInt(req.params.id);
-    const point = gatheringService.getGatheringPointById(pointId);
+    const nodeId = parseInt(req.params.id);
+    const node = gatheringNodeService.getNodeById(nodeId);
 
-    if (!point) {
-      return res.status(404).json({ error: 'Gathering point not found' });
+    if (!node) {
+      return res.status(404).json({ error: 'Gathering node not found' });
     }
 
-    res.json(point);
+    const items = gatheringNodeService.getItemsAtNode(nodeId);
+    res.json({ ...node, items });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to get gathering point', message: String(error) });
+    res.status(500).json({ error: 'Failed to get gathering node', message: String(error) });
   }
 });
 
@@ -1813,7 +1813,7 @@ app.get('/api/gathering/points/:id', (req, res) => {
  */
 app.get('/api/gathering/available', (_req, res) => {
   try {
-    const nodes = gatheringService.getAvailableNodes(new Date());
+    const nodes = gatheringNodeService.getAvailableNodes(new Date());
     res.json(nodes);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get available nodes', message: String(error) });
@@ -1842,7 +1842,11 @@ app.get('/api/gathering/available', (_req, res) => {
  */
 app.get('/api/gathering/types', (_req, res) => {
   try {
-    const types = gatheringService.getGatheringTypes();
+    const stats = gatheringNodeService.getStats();
+    const types = Object.keys(stats.by_type).map((type) => ({
+      name: type,
+      count: stats.by_type[type],
+    }));
     res.json(types);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get gathering types', message: String(error) });
@@ -2703,12 +2707,26 @@ app.get('/gathering', (req, res) => {
   try {
     const type = req.query.type as string;
     const location = req.query.location as string;
+    const available = req.query.available === '1';
 
-    const result = gatheringService.searchGatheringPoints({
-      gathering_type: type as any,
-      place_name: location,
-      limit: 100,
-    });
+    const now = new Date();
+    const et = getEorzeanTime(now);
+
+    let nodes;
+    let total;
+
+    if (available) {
+      const availableNodes = gatheringNodeService.getAvailableNodes(now, type?.toLowerCase());
+      nodes = availableNodes.slice(0, 100);
+      total = availableNodes.length;
+    } else {
+      nodes = gatheringNodeService.searchNodes({
+        type: type?.toLowerCase(),
+        location,
+        limit: 100,
+      });
+      total = nodes.length;
+    }
 
     res.send(`
       <!DOCTYPE html>
@@ -2734,41 +2752,37 @@ app.get('/gathering', (req, res) => {
           </div>
 
           <p style="color: #aaa; margin-bottom: 16px;">
-            Showing ${result.points.length} of ${result.total} gathering points
+            ${available ? `Current ET: ${et.hours.toString().padStart(2, '0')}:${et.minutes.toString().padStart(2, '0')} • ` : ''}Showing ${nodes.length} of ${total} gathering nodes
           </p>
 
           ${
-            result.points.length === 0
+            nodes.length === 0
               ? `
             <div class="empty-state">
               <div style="font-size: 3em; margin-bottom: 16px;">⛏️</div>
-              <p>No gathering points found</p>
+              <p>No gathering nodes found</p>
             </div>
           `
               : ''
           }
 
-          ${result.points
+          ${nodes
             .map(
-              (point) => `
+              (node: any) => `
             <div class="card">
-              <a href="/gathering/${point.id}" style="font-size: 1.1em; font-weight: bold;">
-                ${point.place_name || point.territory_name || 'Unknown Location'}
+              <a href="/gathering/${node.id}" style="font-size: 1.1em; font-weight: bold;">
+                ${node.name || node.location_name || 'Unnamed Node'}
               </a>
               <div style="margin-top: 8px;">
-                <span class="badge">${point.gathering_type_name}</span>
-                <span class="badge">Level ${point.gathering_level}</span>
-                ${point.is_limited ? '<span class="badge" style="background: #ff6b6b;">⏰ Timed</span>' : ''}
+                <span class="badge">${node.type}</span>
+                <span class="badge">Level ${node.level}</span>
+                ${!(node.start_hour === 0 && node.end_hour === 24) ? `<span class="badge" style="background: #ff6b6b;">⏰ ${node.time_window_display || formatTimeWindow(node.start_hour, node.end_hour)}</span>` : ''}
+                ${node.is_available ? '<span class="badge" style="background: #4ecca3;">✓ Available NOW</span>' : ''}
+                ${node.folklore ? '<span class="badge" style="background: #9b59b6;">📚 Folklore</span>' : ''}
               </div>
-              ${
-                point.items && point.items.length > 0
-                  ? `
-                <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
-                  ${point.items.length} item${point.items.length > 1 ? 's' : ''} available
-                </div>
-              `
-                  : ''
-              }
+              <div style="margin-top: 8px; color: #aaa; font-size: 0.9em;">
+                📍 ${node.location_name || 'Unknown Location'}
+              </div>
             </div>
           `
             )
@@ -2793,16 +2807,16 @@ app.get('/gathering', (req, res) => {
 // Gathering node details page
 app.get('/gathering/:id', (req, res) => {
   try {
-    const pointId = parseInt(req.params.id);
-    const point = gatheringService.getGatheringPointById(pointId);
+    const nodeId = parseInt(req.params.id);
+    const node = gatheringNodeService.getNodeById(nodeId);
 
-    if (!point) {
+    if (!node) {
       return res.status(404).send(`
         <!DOCTYPE html>
         <html>
         <head>
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Gathering Point Not Found - Eorzea Tracker</title>
+          <title>Gathering Node Not Found - Eorzea Tracker</title>
           <link rel="stylesheet" href="/style.css">
         </head>
         <body>
@@ -2810,8 +2824,8 @@ app.get('/gathering/:id', (req, res) => {
             <a href="/gathering" class="back-link">← Back to Gathering</a>
             <div class="empty-state">
               <div style="font-size: 3em; margin-bottom: 16px;">⛏️</div>
-              <h1>Gathering Point Not Found</h1>
-              <p>Gathering point ID ${pointId} doesn't exist</p>
+              <h1>Gathering Node Not Found</h1>
+              <p>Gathering node ID ${nodeId} doesn't exist</p>
             </div>
           </div>
         </body>
@@ -2819,40 +2833,101 @@ app.get('/gathering/:id', (req, res) => {
       `);
     }
 
+    const now = new Date();
+    const et = getEorzeanTime(now);
+    const timeWindow = formatTimeWindow(node.start_hour, node.end_hour);
+    const isAvailable = isInTimeWindow(et.hours, node.start_hour, node.end_hour);
+    const items = gatheringNodeService.getItemsAtNode(nodeId);
+
     res.send(`
       <!DOCTYPE html>
       <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>${point.place_name || 'Gathering Point'} - Eorzea Tracker</title>
+        <title>${node.name || node.location_name || 'Gathering Node'} - Eorzea Tracker</title>
         <link rel="stylesheet" href="/style.css">
       </head>
       <body>
         <div class="time-widget" id="et-clock">⏰ ET 00:00:00</div>
         <div class="container">
           <a href="/gathering" class="back-link">← Back to Gathering</a>
-          <h1>⛏️ ${point.place_name || point.territory_name || 'Gathering Point'}</h1>
+          <h1>⛏️ ${node.name || node.location_name || 'Gathering Node'}</h1>
+
+          <div class="card" style="border-left-color: ${isAvailable ? '#4ecca3' : '#ff6b6b'}">
+            <h2 style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 1.5em;">${isAvailable ? '✓' : '⏰'}</span>
+              ${isAvailable ? 'Available Now' : 'Not Available'}
+            </h2>
+            <div class="info-row">
+              <span class="label">Time Window</span>
+              <span class="value">${timeWindow}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Current ET</span>
+              <span class="value">${et.hours.toString().padStart(2, '0')}:${et.minutes.toString().padStart(2, '0')}</span>
+            </div>
+          </div>
 
           <div class="card">
             <h2>Node Info</h2>
             <div class="info-row">
               <span class="label">Type</span>
-              <span class="value">${point.gathering_type_name}</span>
+              <span class="value">${node.type}</span>
             </div>
             <div class="info-row">
               <span class="label">Level</span>
-              <span class="value">${point.gathering_level}</span>
+              <span class="value">${node.level}</span>
             </div>
             <div class="info-row">
-              <span class="label">Territory</span>
-              <span class="value">${point.territory_name || 'Unknown'}</span>
+              <span class="label">Location</span>
+              <span class="value">${node.location_name || 'Unknown'}</span>
             </div>
             ${
-              point.is_limited
+              node.x && node.y
                 ? `
             <div class="info-row">
-              <span class="label">Availability</span>
-              <span class="value" style="color: #ff6b6b;">⏰ Timed Node</span>
+              <span class="label">Coordinates</span>
+              <span class="value">(${node.x.toFixed(1)}, ${node.y.toFixed(1)})</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              node.folklore
+                ? `
+            <div class="info-row">
+              <span class="label">Folklore</span>
+              <span class="value" style="color: #9b59b6;">📚 Required</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              node.ephemeral
+                ? `
+            <div class="info-row">
+              <span class="label">Type</span>
+              <span class="value" style="color: #ff6b6b;">Ephemeral Node</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              node.legendary
+                ? `
+            <div class="info-row">
+              <span class="label">Type</span>
+              <span class="value" style="color: #ffd700;">⭐ Legendary Node</span>
+            </div>
+            `
+                : ''
+            }
+            ${
+              node.patch
+                ? `
+            <div class="info-row">
+              <span class="label">Patch</span>
+              <span class="value">${node.patch}</span>
             </div>
             `
                 : ''
@@ -2860,20 +2935,20 @@ app.get('/gathering/:id', (req, res) => {
           </div>
 
           ${
-            point.items && point.items.length > 0
+            items.length > 0
               ? `
           <div class="card">
             <h2>Available Items</h2>
-            ${point.items
+            ${items
               .map(
-                (item) => `
+                (item: any) => `
               <div style="padding: 12px 0; border-bottom: 1px solid #0f3460;">
                 <div style="font-weight: bold;">
-                  <a href="/item/${item.item_id}">${item.item_name}</a>
+                  <a href="/item/${item.item_id}">${item.item_name || `Item #${item.item_id}`}</a>
                 </div>
                 <div style="margin-top: 4px;">
-                  <span class="badge">Level ${item.item_level}</span>
-                  ${item.is_hidden ? '<span class="badge" style="background: #9b59b6;">Hidden</span>' : ''}
+                  <span class="badge">Slot ${item.slot}</span>
+                  ${item.hidden ? '<span class="badge" style="background: #9b59b6;">Hidden</span>' : ''}
                 </div>
               </div>
             `
@@ -2889,7 +2964,7 @@ app.get('/gathering/:id', (req, res) => {
       </html>
     `);
   } catch (error) {
-    res.status(500).send('Error loading gathering point details');
+    res.status(500).send('Error loading gathering node details');
   }
 });
 
@@ -3502,7 +3577,7 @@ process.on('SIGINT', () => {
   fishTracker.close();
   questTracker.close();
   itemService.close();
-  gatheringService.close();
+  gatheringNodeService.close();
   craftingService.close();
   collectiblesService.close();
   process.exit(0);
