@@ -1,4 +1,4 @@
-# 🎯 **COMPREHENSIVE PLAN: Offline Quest Data System Using CSV + Schema Definitions**
+# COMPREHENSIVE PLAN: Offline Quest Data System Using CSV + Schema Definitions
 
 ## **Executive Summary**
 

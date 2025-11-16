@@ -8,19 +8,19 @@ When you complete major story milestones in FFXIV (like finishing an expansion's
 
 ## Features
 
-### 🎯 Achievement Analysis
+### Achievement Analysis
 
 - Detects Main Scenario Quest (MSQ) completion achievements
 - Maps achievements to quest chains
 - Supports all expansions: ARR → Dawntrail
 
-### 📊 Confidence Scoring
+### Confidence Scoring
 
 - **High Confidence (≥90%)**: MSQ completions and major milestones
 - **Medium Confidence (70-89%)**: Job quests and class progression
 - **Low Confidence (<70%)**: Other inferences
 
-### 🔍 Full Audit Trail
+### Full Audit Trail
 
 Every inferred quest completion includes:
 
@@ -191,14 +191,14 @@ Completed quests are stored with the following metadata:
 
 ## Best Practices
 
-### ✅ DO
+### DO
 
 - Sync your highest completion achievements first
 - Use dry-run to preview before committing
 - Verify a few sample quests after sync
 - Continue manual tracking for new quests
 
-### ❌ DON'T
+### DON'T
 
 - Sync achievements you don't actually have in-game
 - Re-sync the same achievements multiple times (it's idempotent but unnecessary)
@@ -240,12 +240,12 @@ Look at the "Quest Sources" section to see your breakdown.
 
 Future enhancements planned:
 
-- [ ] Lodestone achievement API integration (auto-detect your achievements)
-- [ ] Job quest inference based on level achievements
-- [ ] Dungeon unlock inference
-- [ ] Beast tribe quest inference
-- [ ] Patch MSQ milestone achievements
-- [ ] Confidence adjustment system based on user corrections
+- Lodestone achievement API integration (auto-detect your achievements)
+- Job quest inference based on level achievements
+- Dungeon unlock inference
+- Beast tribe quest inference
+- Patch MSQ milestone achievements
+- Confidence adjustment system based on user corrections
 
 ## Examples
 
