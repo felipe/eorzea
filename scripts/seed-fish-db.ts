@@ -21,7 +21,7 @@ const __dirname = dirname(__filename);
 
 const DATA_DIR = join(__dirname, '..', 'data');
 const INPUT_FILE = join(DATA_DIR, 'fish-data.json');
-const DB_FILE = join(DATA_DIR, 'fish.db');
+const DB_FILE = join(DATA_DIR, 'gameData.db');
 
 function createSchema(db: Database.Database): void {
   console.log('📐 Creating database schema...');

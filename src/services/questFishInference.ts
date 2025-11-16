@@ -7,8 +7,8 @@
 import Database from 'better-sqlite3';
 import { join } from 'path';
 
-const GAME_DB_PATH = join(process.cwd(), 'data', 'game.db');
-const PROFILE_DB_PATH = join(process.cwd(), 'data', 'profile.db');
+const GAME_DB_PATH = join(process.cwd(), 'data', 'gameData.db');
+const PROFILE_DB_PATH = join(process.cwd(), 'data', 'userData.db');
 
 export interface FishInference {
   fishId: number;

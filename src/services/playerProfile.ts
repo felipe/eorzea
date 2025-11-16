@@ -21,23 +21,19 @@ import {
 import { UnlockedTitle, UnlockedAchievement } from '../types/title.js';
 import { getLodestoneClient } from './lodestone.js';
 
-const PROFILE_DB_PATH = join(process.cwd(), 'data', 'profile.db');
-const GAME_DB_PATH = join(process.cwd(), 'data', 'game.db');
-const FISH_DB_PATH = join(process.cwd(), 'data', 'fish.db');
+const USER_DB_PATH = join(process.cwd(), 'data', 'userData.db');
+const GAME_DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export class PlayerProfileService {
   private db: Database.Database;
   private gameDb: Database.Database;
-  private fishDb: Database.Database;
 
   constructor(
-    profileDbPath: string = PROFILE_DB_PATH,
-    gameDbPath: string = GAME_DB_PATH,
-    fishDbPath: string = FISH_DB_PATH
+    userDbPath: string = USER_DB_PATH,
+    gameDbPath: string = GAME_DB_PATH
   ) {
-    this.db = new Database(profileDbPath);
+    this.db = new Database(userDbPath);
     this.gameDb = new Database(gameDbPath, { readonly: true });
-    this.fishDb = new Database(fishDbPath, { readonly: true });
 
     // Enable foreign keys
     this.db.pragma('foreign_keys = ON');
@@ -552,7 +548,7 @@ export class PlayerProfileService {
 
     let bigFishCount = 0;
     for (const fishId of uniqueFishIds) {
-      const fish = this.fishDb.prepare('SELECT big_fish FROM fish WHERE id = ?').get(fishId) as any;
+      const fish = this.gameDb.prepare('SELECT big_fish FROM fish WHERE id = ?').get(fishId) as any;
       if (fish && fish.big_fish === 1) {
         bigFishCount++;
       }
@@ -767,13 +763,13 @@ export class PlayerProfileService {
     const questCompletionPercentage = totalQuests > 0 ? (completedQuests / totalQuests) * 100 : 0;
 
     // Fish stats
-    const totalFish = (this.fishDb.prepare('SELECT COUNT(*) as count FROM fish').get() as any)
+    const totalFish = (this.gameDb.prepare('SELECT COUNT(*) as count FROM fish').get() as any)
       .count;
     const caughtFish = this.getCaughtFishCount(characterId);
     const fishCompletionPercentage = totalFish > 0 ? (caughtFish / totalFish) * 100 : 0;
 
     const totalBigFish = (
-      this.fishDb.prepare('SELECT COUNT(*) as count FROM fish WHERE big_fish = 1').get() as any
+      this.gameDb.prepare('SELECT COUNT(*) as count FROM fish WHERE big_fish = 1').get() as any
     ).count;
     const bigFishCaught = this.getBigFishCaughtCount(characterId);
 
@@ -811,7 +807,7 @@ export class PlayerProfileService {
         };
       }),
       ...recentFish.map((f) => {
-        const fishData = this.fishDb
+        const fishData = this.gameDb
           .prepare('SELECT i.name FROM fish f LEFT JOIN items i ON f.id = i.id WHERE f.id = ?')
           .get(f.fishId) as any;
         return {
@@ -1098,7 +1094,6 @@ export class PlayerProfileService {
   close(): void {
     this.db.close();
     this.gameDb.close();
-    this.fishDb.close();
   }
 
   // ==================== Row Mapping ====================

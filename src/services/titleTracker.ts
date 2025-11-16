@@ -8,7 +8,7 @@ import Database from 'better-sqlite3';
 import { join } from 'path';
 import type { Title, TitleSearchOptions } from '../types/title.js';
 
-const DB_PATH = join(process.cwd(), 'data', 'game.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export class TitleTrackerService {
   private db: Database.Database;

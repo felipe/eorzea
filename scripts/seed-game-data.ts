@@ -18,7 +18,7 @@ import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const CSV_DIR = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv');
-const DB_PATH = join(process.cwd(), 'data', 'game.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 interface CSVRow {
   [key: string]: string;
@@ -74,7 +74,7 @@ function loadCSV(filename: string): CSVRow[] | null {
 function initializeSchema(db: Database.Database) {
   console.log('\n📋 Initializing database schema...');
 
-  const schemaPath = join(process.cwd(), 'data', 'game-data-schema.sql');
+  const schemaPath = join(process.cwd(), 'data', 'gameData-schema.sql');
 
   if (!existsSync(schemaPath)) {
     console.error('❌ Schema file not found:', schemaPath);

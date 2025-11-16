@@ -10,7 +10,7 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 const CSV_PATH = join(process.cwd(), 'data', 'ffxiv-datamining', 'csv', 'Title.csv');
-const DB_PATH = join(process.cwd(), 'data', 'game.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 interface TitleRow {
   key: string;

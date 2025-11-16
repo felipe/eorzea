@@ -24,7 +24,7 @@ const CSV_DIR = join(DATA_DIR, 'ffxiv-datamining', 'csv');
 const SCHEMA_DIR = join(DATA_DIR, 'game-schemas');
 const OUTPUT_FILE = join(DATA_DIR, 'quest-data.json');
 const FISH_DATA_FILE = join(DATA_DIR, 'fish-data.json');
-const FISH_DB_FILE = join(DATA_DIR, 'fish.db');
+const FISH_DB_FILE = join(DATA_DIR, 'gameData.db');
 
 async function parseQuestData(): Promise<void> {
   console.log('🎮 Parsing quest data from CSV files...\n');

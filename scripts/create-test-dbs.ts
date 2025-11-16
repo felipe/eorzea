@@ -16,11 +16,11 @@ if (!existsSync(DATA_DIR)) {
 
 console.log('Creating test databases...\n');
 
-// Create fish.db
-console.log('📦 Creating data/fish.db...');
-const fishDb = new Database(join(DATA_DIR, 'fish.db'));
+// Create gameData.db
+console.log('📦 Creating data/gameData.db...');
+const gameDb = new Database(join(DATA_DIR, 'gameData.db'));
 
-fishDb.exec(`
+gameDb.exec(`
   -- Fish table
   CREATE TABLE IF NOT EXISTS fish (
     id INTEGER PRIMARY KEY,
@@ -106,16 +106,7 @@ fishDb.exec(`
   VALUES (1, 1, 1, 100.0, 100.0, 5.0, 1);
   INSERT OR IGNORE INTO zones (id, name) VALUES (1, 'Test Zone');
   INSERT OR IGNORE INTO weather_names (id, name) VALUES (1, 'Clear Skies');
-`);
 
-fishDb.close();
-console.log('✅ fish.db created\n');
-
-// Create game.db
-console.log('📦 Creating data/game.db...');
-const gameDb = new Database(join(DATA_DIR, 'game.db'));
-
-gameDb.exec(`
   -- Items table
   CREATE TABLE IF NOT EXISTS items (
     id INTEGER PRIMARY KEY,
@@ -340,8 +331,31 @@ gameDb.exec(`
 `);
 
 gameDb.close();
-console.log('✅ game.db created\n');
+console.log('✅ gameData.db created\n');
+
+// Create userData.db
+console.log('📦 Creating data/userData.db...');
+const userDb = new Database(join(DATA_DIR, 'userData.db'));
+
+userDb.exec(`
+  -- Characters table
+  CREATE TABLE IF NOT EXISTS characters (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    server TEXT NOT NULL,
+    data_center TEXT,
+    created_at INTEGER NOT NULL,
+    is_active BOOLEAN DEFAULT 1
+  );
+
+  -- Insert test character
+  INSERT OR IGNORE INTO characters (id, name, server, created_at)
+  VALUES ('test-123', 'Test Character', 'Test Server', ${Date.now()});
+`);
+
+userDb.close();
+console.log('✅ userData.db created\n');
 
 console.log('🎉 Test databases created successfully!');
-console.log('   data/fish.db - Fish tracking database');
-console.log('   data/game.db - Quest, items, crafting, gathering, collectibles database');
+console.log('   data/gameData.db - Game reference data (items, quests, fish, crafting, etc.)');
+console.log('   data/userData.db - User-specific data (characters, progress, bookmarks)');

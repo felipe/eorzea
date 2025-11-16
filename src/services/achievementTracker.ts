@@ -8,7 +8,7 @@ import Database from 'better-sqlite3';
 import { join } from 'path';
 import type { Achievement, AchievementSearchOptions } from '../types/title.js';
 
-const DB_PATH = join(process.cwd(), 'data', 'game.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export class AchievementTrackerService {
   private db: Database.Database;

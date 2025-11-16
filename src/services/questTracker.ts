@@ -9,7 +9,7 @@ import { join } from 'path';
 import type { Quest, QuestSearchOptions } from '../types/quest.js';
 
 // Default database path (relative to project root)
-const DB_PATH = join(process.cwd(), 'data', 'game.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export class QuestTrackerService {
   private db: Database.Database;

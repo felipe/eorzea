@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DATA_DIR = join(__dirname, '..', 'data');
-const DB_FILE = join(DATA_DIR, 'fish.db');
+const DB_FILE = join(DATA_DIR, 'gameData.db');
 const FISH_DATA_FILE = join(DATA_DIR, 'fish-data.json');
 
 function main() {

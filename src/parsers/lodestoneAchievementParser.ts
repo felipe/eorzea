@@ -23,7 +23,7 @@ export interface ParseResult {
   unmatchedNames: string[];
 }
 
-const GAME_DB_PATH = join(process.cwd(), 'data', 'game.db');
+const GAME_DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 /**
  * Parse Lodestone achievement text format
