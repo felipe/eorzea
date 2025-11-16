@@ -9,7 +9,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import ora from 'ora';
 import { GatheringNodeService } from '../services/gatheringNodeService.js';
-import { getEorzeanTime, formatTimeWindow } from '../utils/eorzeanTime.js';
+import { getEorzeanTime, formatTimeWindow, isInTimeWindow } from '../utils/eorzeanTime.js';
 
 /**
  * Options for the gather command
@@ -99,12 +99,7 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
 
       // Time window info
       const timeWindow = formatTimeWindow(node.start_hour, node.end_hour);
-      const isAvailable =
-        node.start_hour === 0 && node.end_hour === 24
-          ? true
-          : node.start_hour > node.end_hour
-            ? et.hours >= node.start_hour || et.hours < node.end_hour
-            : et.hours >= node.start_hour && et.hours < node.end_hour;
+      const isAvailable = isInTimeWindow(et.hours, node.start_hour, node.end_hour);
 
       details.push(['Time Window', timeWindow]);
       details.push([
@@ -116,10 +111,10 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
         details.push(['Requires Folklore', chalk.yellow('Yes')]);
       }
       if (node.ephemeral) {
-        details.push(['Type', chalk.magenta('Ephemeral Node')]);
+        details.push(['Special Type', chalk.magenta('Ephemeral Node')]);
       }
       if (node.legendary) {
-        details.push(['Type', chalk.yellow('⭐ Legendary Node')]);
+        details.push(['Special Type', chalk.yellow('⭐ Legendary Node')]);
       }
       if (node.patch) {
         details.push(['Patch', node.patch.toString()]);

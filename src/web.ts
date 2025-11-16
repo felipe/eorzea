@@ -2776,7 +2776,7 @@ app.get('/gathering', (req, res) => {
               <div style="margin-top: 8px;">
                 <span class="badge">${node.type}</span>
                 <span class="badge">Level ${node.level}</span>
-                ${node.start_hour !== 0 || node.end_hour !== 24 ? `<span class="badge" style="background: #ff6b6b;">⏰ ${node.time_window_display || formatTimeWindow(node.start_hour, node.end_hour)}</span>` : ''}
+                ${!(node.start_hour === 0 && node.end_hour === 24) ? `<span class="badge" style="background: #ff6b6b;">⏰ ${node.time_window_display || formatTimeWindow(node.start_hour, node.end_hour)}</span>` : ''}
                 ${node.is_available ? '<span class="badge" style="background: #4ecca3;">✓ Available NOW</span>' : ''}
                 ${node.folklore ? '<span class="badge" style="background: #9b59b6;">📚 Folklore</span>' : ''}
               </div>
@@ -2944,7 +2944,7 @@ app.get('/gathering/:id', (req, res) => {
                 (item: any) => `
               <div style="padding: 12px 0; border-bottom: 1px solid #0f3460;">
                 <div style="font-weight: bold;">
-                  ${item.item_name || `Item #${item.item_id}`}
+                  <a href="/item/${item.item_id}">${item.item_name || `Item #${item.item_id}`}</a>
                 </div>
                 <div style="margin-top: 4px;">
                   <span class="badge">Slot ${item.slot}</span>

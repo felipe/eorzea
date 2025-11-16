@@ -238,12 +238,12 @@ export class GatheringNodeService {
           time_window_display: formatTimeWindow(node.start_hour, node.end_hour),
         };
 
-        if (isAvailable && node.start_hour !== 0 && node.end_hour !== 24) {
+        if (isAvailable && !(node.start_hour === 0 && node.end_hour === 24)) {
           const windowEnd = getCurrentWindowEnd(node.start_hour, node.end_hour, currentTime);
           if (windowEnd) {
             nodeWithAvailability.window_closes = windowEnd;
           }
-        } else if (!isAvailable && node.start_hour !== 0) {
+        } else if (!isAvailable && !(node.start_hour === 0 && node.end_hour === 24)) {
           const nextStart = getNextWindowStart(node.start_hour, node.end_hour, currentTime);
           nodeWithAvailability.next_available = nextStart;
         }
