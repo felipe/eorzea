@@ -328,5 +328,3 @@ For issues or questions:
 - Check the [main README](../README.md)
 - Open an issue on GitHub
 - Join the community Discord
-
-Happy crafting, gathering, and collecting! 🎉

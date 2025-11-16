@@ -1,10 +1,10 @@
 # Eorzea Game Data Assistant
 
-A comprehensive offline-first FFXIV companion tool with complete item, gathering, crafting, and collectibles databases. Features terminal CLI and mobile web interface!
+A comprehensive offline-first FFXIV companion tool with complete item, gathering, crafting, and collectibles databases. Features terminal CLI and mobile web interface.
 
 ## Features
 
-### 🎮 Complete Game Data (NEW!)
+### Complete Game Data
 
 - **50,000+ Items**: Full item database with sources and uses
 - **10,000+ Recipes**: Complete crafting guide for all Disciples of the Hand
@@ -13,7 +13,7 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **700+ Minions**: Complete companion collection tracking
 - **400+ Orchestrion Rolls**: Music collection with sources
 
-### 🔍 Item Lookup System (NEW!)
+### Item Lookup System
 
 - **Comprehensive Search**: Find any item by name, level, rarity, or category
 - **Source Tracking**: See where to get items (crafting, gathering, quests, vendors, dungeons)
@@ -21,7 +21,7 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Cross-References**: Links to recipes, gathering nodes, and quest rewards
 - **Complete Guides**: One command shows everything about an item
 
-### ⛏️ Gathering & Crafting (NEW!)
+### Gathering & Crafting
 
 - **Mining & Botany**: Track gathering nodes similar to fishing system
 - **Timed Nodes**: Support for ephemeral/timed gathering points
@@ -30,7 +30,7 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Crafting Guides**: Complete breakdown with requirements and costs
 - **Progress Tracking**: Track gathered items and crafted recipes per character
 
-### 🏆 Collectibles Tracking (NEW!)
+### Collectibles Tracking
 
 - **Mount Collection**: Track flying, aquatic, and multi-seat mounts
 - **Minion Collection**: Battle and non-battle companion tracking
@@ -47,7 +47,7 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Eorzean Time**: Real-time Eorzean time calculation for time-sensitive activities
 - **100% Offline**: All game data stored locally in SQLite databases
 
-### 🎯 Player Memory System (NEW!)
+### Player Memory System
 
 - **Character Profiles**: Multi-character support with progress tracking
 - **Quest Completion**: Mark quests complete with notes
@@ -56,14 +56,14 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Job Tracking**: Sync job levels from Lodestone
 - **Session History**: Track your play sessions
 
-### 🏆 Title & Achievement System (NEW!)
+### Title & Achievement System
 
 - **810 Titles**: Search, track, and unlock titles
 - **3,751 Achievements**: Full achievement database with categories
 - **Auto-unlock**: Achievements automatically unlock their title rewards
 - **Progress Tracking**: Track title and achievement collection
 
-### 🔄 Intelligent Sync (NEW!)
+### Intelligent Sync
 
 - **Achievement Analysis**: Sync achievements to infer quest completions
 - **Confidence Scoring**: 95% confidence for MSQ inferences
@@ -71,7 +71,7 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 - **Full Audit Trail**: Track how quests were marked (manual vs inferred)
 - **Metadata**: Source, confidence, and achievement linkage for all quests
 
-### 📱 Mobile Web View
+### Mobile Web View
 
 - **Responsive Design**: Access your data on your phone
 - **Dark Theme**: Easy on the eyes
@@ -81,11 +81,12 @@ A comprehensive offline-first FFXIV companion tool with complete item, gathering
 
 Eorzea provides three distinct interfaces for accessing game data, each suited for different use cases:
 
-### 1. 🖥️ **CLI (Command Line Interface)**
+### 1. CLI (Command Line Interface)
 
 **Best for:** Power users, automation, scripting
 
 **Features:**
+
 - Fast, keyboard-driven interface
 - Full access to all game data
 - Character management and progress tracking
@@ -93,17 +94,19 @@ Eorzea provides three distinct interfaces for accessing game data, each suited f
 - Perfect for quick lookups and batch operations
 
 **Example:**
+
 ```bash
 eorzea fish --available
 eorzea item search "Darksteel Ore"
 eorzea quest --search "The Ultimate Weapon"
 ```
 
-### 2. 🔌 **JSON REST API**
+### 2. JSON REST API
 
 **Best for:** Third-party apps, integrations, automation
 
 **Features:**
+
 - Complete RESTful API with 30+ endpoints
 - JSON responses for all game data
 - Pagination support (limit/offset)
@@ -114,6 +117,7 @@ eorzea quest --search "The Ultimate Weapon"
 **Base URL:** `http://localhost:3000/api`
 
 **Available APIs:**
+
 - **Fish**: `/api/fish`, `/api/fish/available`, `/api/fish/:id`
 - **Quests**: `/api/quests`, `/api/quests/:id`
 - **Items**: `/api/items`, `/api/items/:id`, `/api/items/:id/guide`, `/api/items/:id/sources`, `/api/items/:id/uses`
@@ -122,6 +126,7 @@ eorzea quest --search "The Ultimate Weapon"
 - **Collectibles**: `/api/mounts`, `/api/companions`, `/api/orchestrion`, `/api/collection/stats`
 
 **Example:**
+
 ```bash
 # Get all flying mounts
 curl "http://localhost:3000/api/mounts?is_flying=true"
@@ -135,11 +140,12 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 
 **Documentation:** See `docs/openapi.yaml` for complete API specification
 
-### 3. 📱 **Web UI (Mobile-Optimized)**
+### 3. Web UI (Mobile-Optimized)
 
 **Best for:** Browsing on phones/tablets, visual exploration
 
 **Features:**
+
 - Mobile-responsive HTML pages
 - Dark theme optimized for mobile
 - Browse all game data visually
@@ -150,6 +156,7 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 **URL:** `http://localhost:3000` (or `http://YOUR_IP:3000` from other devices)
 
 **Available Pages:**
+
 - **Fish**: `/fish`, `/fish/available`, `/fish/:id`
 - **Quests**: `/quests`, `/quest/:id`
 - **Items**: `/items`, `/item/:id`
@@ -201,12 +208,13 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 ```
 
 **Key Design Principles:**
-- ✅ **Single Source of Truth**: All interfaces (CLI, JSON API, HTML) call the same Service Layer
-- ✅ **No Duplicate Logic**: Both JSON and HTML endpoints use identical service calls
-- ✅ **Direct Service Access**: HTML endpoints call services directly (no internal HTTP overhead)
-- ✅ **Separation of Concerns**: Clear boundaries between presentation, API, business logic, and data layers
-- ✅ **Offline-First**: All data stored locally in SQLite
-- ✅ **RESTful Design**: Consistent API patterns across all endpoints
+
+- **Single Source of Truth**: All interfaces (CLI, JSON API, HTML) call the same Service Layer
+- **No Duplicate Logic**: Both JSON and HTML endpoints use identical service calls
+- **Direct Service Access**: HTML endpoints call services directly (no internal HTTP overhead)
+- **Separation of Concerns**: Clear boundaries between presentation, API, business logic, and data layers
+- **Offline-First**: All data stored locally in SQLite
+- **RESTful Design**: Consistent API patterns across all endpoints
 
 ## Installation
 
@@ -323,7 +331,7 @@ eorzea orchestrion --id 45 --obtained
 eorzea collection                # Show all collection progress
 ```
 
-### 📱 Web Interface (Mobile-Optimized)
+### Web Interface (Mobile-Optimized)
 
 ```bash
 # Start the web server
@@ -347,7 +355,7 @@ yarn web
 
 See [`docs/WEB_VIEW.md`](docs/WEB_VIEW.md) for detailed web view documentation.
 
-## 🚀 Quick Start: Intelligent Sync
+## Quick Start: Intelligent Sync
 
 The fastest way to populate your quest history:
 
@@ -369,7 +377,7 @@ eorzea sync --achievements 2298,2958,3496
 eorzea progress
 ```
 
-**Result:** 900+ quests inferred in seconds! 🎉
+**Result:** 900+ quests inferred in seconds.
 
 See [`docs/intelligent-sync.md`](docs/intelligent-sync.md) for complete documentation.
 
@@ -440,7 +448,7 @@ yarn seed-game-data
 
 ## What's Inside
 
-### Item System (NEW!)
+### Item System
 
 Powered by data from [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-datamining):
 
@@ -452,7 +460,7 @@ Powered by data from [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-d
 - **Search and filter**: By name, level, rarity, category, source type
 - **Complete guides**: One command shows everything about an item
 
-### Crafting System (NEW!)
+### Crafting System
 
 - **10,000+ recipes** for all Disciples of the Hand
 - **8 craft types**: Carpenter, Blacksmith, Armorer, Goldsmith, Leatherworker, Weaver, Alchemist, Culinarian
@@ -463,7 +471,7 @@ Powered by data from [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-d
 - **Search options**: By craft type, result item, ingredient, level
 - **Progress tracking**: Track crafted recipes per character
 
-### Gathering System (NEW!)
+### Gathering System
 
 - **Thousands of gathering nodes** for Mining, Botany, and Spearfishing
 - **Node locations**: Map coordinates and territory names
@@ -474,25 +482,29 @@ Powered by data from [xivapi/ffxiv-datamining](https://github.com/xivapi/ffxiv-d
 - **Progress tracking**: Track gathered items per character
 - **Similar to fishing**: Follows the same patterns as fish tracking
 
-### Collectibles System (NEW!)
+### Collectibles System
 
 **Mounts** (400+):
+
 - Flying and aquatic mount indicators
 - Multi-seat mount tracking
 - Source information (quest, achievement, shop, dungeon, etc.)
 - Collection progress tracking
 
 **Minions** (700+):
+
 - Battle companion indicators
 - Source information for all minions
 - Collection completion tracking
 
 **Orchestrion Rolls** (400+):
+
 - Music organized by categories
 - Source information for each roll
 - Music collection tracking
 
 All collectibles include:
+
 - Detailed how-to-obtain guides
 - Visual progress bars
 - Per-character tracking
