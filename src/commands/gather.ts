@@ -1,5 +1,8 @@
 /**
  * Gathering CLI Commands - Updated for Time-Aware Nodes
+ *
+ * This module provides CLI commands for browsing and searching gathering nodes
+ * with real-time availability based on Eorzean time windows.
  */
 
 import chalk from 'chalk';
@@ -8,18 +11,53 @@ import ora from 'ora';
 import { GatheringNodeService } from '../services/gatheringNodeService.js';
 import { getEorzeanTime, formatTimeWindow } from '../utils/eorzeanTime.js';
 
+/**
+ * Options for the gather command
+ */
 export interface GatherCommandOptions {
+  /** Show details for a specific node by ID */
   id?: string;
+  /** Filter to show only mining nodes */
   mining?: boolean;
+  /** Filter to show only botany (logging) nodes */
   botany?: boolean;
+  /** Filter to show only currently available nodes */
   available?: boolean;
+  /** Search for nodes that drop a specific item */
   item?: string;
+  /** Filter nodes by level (±2 level range) */
   level?: string;
+  /** Maximum number of results to display */
   limit?: string;
+  /** Filter nodes by location name */
   location?: string;
+  /** Show only timed nodes (ephemeral, unspoiled, legendary) */
   timed?: boolean;
 }
 
+/**
+ * Main handler for the gather command.
+ *
+ * Displays gathering node information with time window awareness, allowing users to:
+ * - View currently available nodes based on Eorzean time
+ * - Search for nodes by type, level, location, or item
+ * - See detailed information about specific nodes including time windows
+ * - View all timed nodes with their next availability window
+ *
+ * @param options - Command options for filtering and display
+ *
+ * @example
+ * ```bash
+ * # Show currently available mining nodes
+ * eorzea gather --available --mining
+ *
+ * # Show all timed nodes with next window info
+ * eorzea gather --timed --limit 20
+ *
+ * # View specific node details
+ * eorzea gather --id 10
+ * ```
+ */
 export async function gatherCommand(options: GatherCommandOptions): Promise<void> {
   const spinner = ora('Loading gathering data...').start();
 
@@ -259,6 +297,12 @@ export async function gatherCommand(options: GatherCommandOptions): Promise<void
   }
 }
 
+/**
+ * Returns an emoji icon for a gathering node type.
+ *
+ * @param type - The gathering type ('mining', 'logging', 'harvesting', 'quarrying')
+ * @returns Emoji icon representing the gathering type
+ */
 function getNodeTypeIcon(type: string): string {
   switch (type.toLowerCase()) {
     case 'mining':
@@ -274,6 +318,14 @@ function getNodeTypeIcon(type: string): string {
   }
 }
 
+/**
+ * Displays a formatted table of gathering nodes without time information.
+ *
+ * Used for general node listings where time availability is not the focus.
+ * Shows node ID, name, type, level, location, and time window.
+ *
+ * @param nodes - Array of gathering nodes to display
+ */
 function displayNodeTable(nodes: any[]): void {
   const table = new Table({
     head: [
@@ -308,6 +360,15 @@ function displayNodeTable(nodes: any[]): void {
   console.log(table.toString());
 }
 
+/**
+ * Displays a formatted table of gathering nodes with real-time availability status.
+ *
+ * Used for timed node listings and available node displays.
+ * Shows node ID, name, type, level, location, time window, and current status
+ * (e.g., "Available NOW" or "in 3h 15m").
+ *
+ * @param nodes - Array of gathering nodes with availability information to display
+ */
 function displayNodeTableWithTime(nodes: any[]): void {
   const table = new Table({
     head: [
@@ -347,6 +408,21 @@ function displayNodeTableWithTime(nodes: any[]): void {
   console.log(table.toString());
 }
 
+/**
+ * Formats a future date as a human-readable time duration from now.
+ *
+ * Converts a future timestamp into a compact string showing how long until
+ * that time (e.g., "3h 15m", "45m", "< 1m").
+ *
+ * @param date - Future date to calculate time until
+ * @returns Formatted time duration string
+ *
+ * @example
+ * ```typescript
+ * const futureTime = new Date(Date.now() + 3.5 * 60 * 60 * 1000);
+ * console.log(formatTimeUntil(futureTime)); // "3h 30m"
+ * ```
+ */
 function formatTimeUntil(date: Date): string {
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
