@@ -19,7 +19,7 @@ const __dirname = dirname(__filename);
 
 const DATA_DIR = join(__dirname, '..', 'data');
 const INPUT_FILE = join(DATA_DIR, 'quest-data.json');
-const DB_FILE = join(DATA_DIR, 'game.db');
+const DB_FILE = join(DATA_DIR, 'gameData.db');
 
 interface QuestData {
   id: number;

@@ -25,7 +25,7 @@ export class ItemService {
   private db: Database.Database;
 
   constructor(dbPath?: string) {
-    const path = dbPath || join(process.cwd(), 'data', 'game.db');
+    const path = dbPath || join(process.cwd(), 'data', 'gameData.db');
     this.db = new Database(path, { readonly: true });
     this.db.pragma('foreign_keys = ON');
   }
@@ -220,7 +220,7 @@ export class ItemService {
     sourceName?: string,
     sourceDetails?: ItemSourceDetails
   ): void {
-    const insertDb = new Database(join(process.cwd(), 'data', 'game.db'));
+    const insertDb = new Database(join(process.cwd(), 'data', 'gameData.db'));
 
     insertDb
       .prepare(
@@ -245,7 +245,7 @@ export class ItemService {
     quantityRequired?: number,
     useDetails?: ItemUseDetails
   ): void {
-    const insertDb = new Database(join(process.cwd(), 'data', 'game.db'));
+    const insertDb = new Database(join(process.cwd(), 'data', 'gameData.db'));
 
     insertDb
       .prepare(

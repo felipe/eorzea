@@ -201,11 +201,28 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
                                  ↓
               ┌────────────────────────────────────────────┐
               │          SQLite Databases                  │
-              │  - game.db (items, quests, etc.)           │
-              │  - fish.db (fish data)                     │
-              │  - profile.db (character progress)         │
+              │  - gameData.db (game reference data)       │
+              │  - userData.db (character progress)        │
               └────────────────────────────────────────────┘
 ```
+
+**Database Structure:**
+
+**gameData.db** (Read-Only Game Reference Data):
+- Items, recipes, and crafting data
+- Gathering nodes (Mining, Botany)
+- Fish database with catch requirements
+- Mounts, minions, and orchestrion rolls
+- Quests, titles, and achievements
+- All game reference data from FFXIV CSVs
+
+**userData.db** (User-Specific Progress):
+- Character profiles and settings
+- Quest completions and job progress
+- Fish catches and gathering logs
+- Crafted items and collection tracking
+- Bookmarks, goals, and session history
+- Everything you can import/export/sync
 
 **Key Design Principles:**
 
@@ -215,6 +232,7 @@ curl "http://localhost:3000/api/items?name=Darksteel&limit=10"
 - **Separation of Concerns**: Clear boundaries between presentation, API, business logic, and data layers
 - **Offline-First**: All data stored locally in SQLite
 - **RESTful Design**: Consistent API patterns across all endpoints
+- **Data Portability**: userData.db can be easily backed up, exported, or synced
 
 ## Installation
 
@@ -395,12 +413,30 @@ DEFAULT_SERVER=YourServer
 The game data CSVs are provided via a git submodule (xivapi/ffxiv-datamining). After cloning and initializing the submodule, seed the databases:
 
 ```bash
-# Seed all game data (items, recipes, gathering, collectibles)
+# Initialize user database (for new users)
+npx tsx scripts/init-user-db.ts
+
+# Seed all game data (items, recipes, gathering, collectibles, fish)
 npm run seed-game-data
+npm run seed-fish-data
 
 # Or seed selectively
 npm run seed-game-data -- --skip-gathering
 npm run seed-game-data -- --skip-collectibles
+```
+
+### Migrating from Old Database Structure
+
+If you have existing `profile.db`, `game.db`, or `fish.db` files from an older version:
+
+```bash
+# Automatically migrate to new consolidated structure
+npx tsx scripts/migrate-to-consolidated-db.ts
+
+# This will:
+# - Create userData.db from profile.db + user tracking data
+# - Create gameData.db from game.db + fish.db
+# - Backup your old databases
 ```
 
 ### Updating Game Data

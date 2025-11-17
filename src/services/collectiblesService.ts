@@ -38,7 +38,7 @@ export class CollectiblesService {
   private db: Database.Database;
 
   constructor(dbPath?: string) {
-    const path = dbPath || join(process.cwd(), 'data', 'game.db');
+    const path = dbPath || join(process.cwd(), 'data', 'gameData.db');
     this.db = new Database(path, { readonly: true });
     this.db.pragma('foreign_keys = ON');
   }
@@ -211,7 +211,7 @@ export class CollectiblesService {
     obtainedFrom?: string,
     notes?: string
   ): void {
-    const writeDb = new Database(join(process.cwd(), 'data', 'game.db'));
+    const writeDb = new Database(join(process.cwd(), 'data', 'gameData.db'));
 
     try {
       writeDb
@@ -383,7 +383,7 @@ export class CollectiblesService {
     obtainedFrom?: string,
     notes?: string
   ): void {
-    const writeDb = new Database(join(process.cwd(), 'data', 'game.db'));
+    const writeDb = new Database(join(process.cwd(), 'data', 'gameData.db'));
 
     try {
       writeDb
@@ -571,7 +571,7 @@ export class CollectiblesService {
     obtainedFrom?: string,
     notes?: string
   ): void {
-    const writeDb = new Database(join(process.cwd(), 'data', 'game.db'));
+    const writeDb = new Database(join(process.cwd(), 'data', 'gameData.db'));
 
     try {
       writeDb

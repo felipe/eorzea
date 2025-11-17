@@ -15,7 +15,7 @@ import {
 } from '../utils/weatherForecast.js';
 
 // Default database path (relative to project root)
-const DB_PATH = join(process.cwd(), 'data', 'fish.db');
+const DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export class FishTrackerService {
   private db: Database.Database;

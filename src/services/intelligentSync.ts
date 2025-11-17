@@ -7,7 +7,7 @@
 import Database from 'better-sqlite3';
 import { join } from 'path';
 
-const GAME_DB_PATH = join(process.cwd(), 'data', 'game.db');
+const GAME_DB_PATH = join(process.cwd(), 'data', 'gameData.db');
 
 export interface QuestInference {
   questId: number;
